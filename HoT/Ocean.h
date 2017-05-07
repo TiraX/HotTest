@@ -28,7 +28,6 @@
 #ifndef _drw_ocean_h
 #define _drw_ocean_h
 
-#ifdef WIN32
 
 #ifndef PLATFORM_WINDOWS
 #define PLATFORM_WINDOWS // for OpenEXR's benefit, won't be
@@ -47,11 +46,6 @@
 #undef max
 #endif
 
-#else
-
-// linux specific stuff should go here
-
-#endif
 
 #include <complex>
 #include <algorithm>
