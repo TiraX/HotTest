@@ -17,6 +17,8 @@
 #include "Engine/Engine.h"
 
 
+const int grid_size = 512;
+
 /** Vertex Buffer */
 class FOceanMeshVertexBuffer : public FVertexBuffer
 {
@@ -110,10 +112,15 @@ public:
 	{
 		const FColor VertexColor(255, 255, 255);
 
-		//const int32 NumTris = Component->OceanMeshTris.Num();
-		//VertexBuffer.Vertices.AddUninitialized(NumTris * 3);
-		//IndexBuffer.Indices.AddUninitialized(NumTris * 3);
-		//// Add each triangle to the vertex/index buffer
+		VertexBuffer.Vertices.AddUninitialized(grid_size * grid_size);
+		IndexBuffer.Indices.AddUninitialized((grid_size - 1) * (grid_size - 1) * 2 * 3);
+		// construct grid
+		for (int y = 0 ; y < grid_size ; ++ y)
+		{
+			for (int x = 0 ; x < grid_size ; ++ x)
+			{
+			}
+		}
 		//for (int32 TriIdx = 0; TriIdx < NumTris; TriIdx++)
 		//{
 		//	FOceanMeshTriangle& Tri = Component->OceanMeshTris[TriIdx];
