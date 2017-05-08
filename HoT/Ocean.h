@@ -389,8 +389,8 @@ class OceanContext : public UsingThreadedFFTW
     a = jxx + jzz;
     b = sqrt((jxx - jzz)*(jxx - jzz) + 4 * jxz * jxz);
 
-    Jminus = 0.5*(a-b);
-    Jplus  = 0.5*(a+b);
+    Jminus = 0.5f*(a-b);
+    Jplus  = 0.5f*(a+b);
 
     qplus  = (Jplus  - jxx)/jxz;
     qminus = (Jminus - jxx)/jxz;
@@ -398,11 +398,11 @@ class OceanContext : public UsingThreadedFFTW
     a = sqrt(1 + qplus*qplus);
     b = sqrt(1 + qminus*qminus);
 
-    Eplus[0] = 1.0/ a;
+    Eplus[0] = 1.0f/ a;
     Eplus[1] = 0.0;
     Eplus[2] = qplus/a;
 
-    Eminus[0] = 1.0/b;
+    Eminus[0] = 1.0f/b;
     Eminus[1] = 0.0;
     Eminus[2] = qminus/b;
   }
@@ -514,12 +514,12 @@ class Ocean: public UsingThreadedFFTW
     // make this robust in the face of erroneous usage
     if (_Lx == 0.0)
     {
-      _Lx = 0.001;
+      _Lx = 0.001f;
       std::cerr << "warning: Ocean has been given a zero size computational domain\n";
     }
-    if (_Lz == 0.0)
+    if (_Lz == 0.0f)
     {
-      _Lz = 0.001;
+      _Lz = 0.001f;
       std::cerr << "warning: Ocean has been given a zero size computational domain\n";
     }
 
