@@ -114,56 +114,56 @@ public:
 
 		VertexBuffer.Vertices.AddUninitialized(grid_size * grid_size);
 		IndexBuffer.Indices.AddUninitialized((grid_size - 1) * (grid_size - 1) * 2 * 3);
+
 		// construct grid
+		const float uv_step = 1.f / grid_size;
 		for (int y = 0 ; y < grid_size ; ++ y)
 		{
 			for (int x = 0 ; x < grid_size ; ++ x)
 			{
+				FDynamicMeshVertex vertex;
+				vertex.Position = FVector(x, y, 0.f);
+				vertex.TextureCoordinate = FVector2D(x * uv_step, y * uv_step);
+
+				const FVector TangentZ = FVector(0, 0, 1);
+				const FVector TangentX = FVector(1, 0, 0);
+				const FVector TangentY = (TangentX ^ TangentZ).GetSafeNormal();
+
+				vertex.SetTangents(TangentX, TangentY, TangentZ);
+				vertex.Color = FColor::Black;
+
+				VertexBuffer.Vertices[y * grid_size + x] = vertex;
 			}
 		}
-		//for (int32 TriIdx = 0; TriIdx < NumTris; TriIdx++)
-		//{
-		//	FOceanMeshTriangle& Tri = Component->OceanMeshTris[TriIdx];
+		int index = 0;
+		for (int y = 0; y < grid_size - 1; ++y)
+		{
+			for (int x = 0; x < grid_size - 1; ++x)
+			{
+				IndexBuffer.Indices[index++] = y * grid_size + x;
+				IndexBuffer.Indices[index++] = y * grid_size + x + 1;
+				IndexBuffer.Indices[index++] = y * (grid_size + 1) + x;
 
-		//	const FVector Edge01 = (Tri.Vertex1 - Tri.Vertex0);
-		//	const FVector Edge02 = (Tri.Vertex2 - Tri.Vertex0);
+				IndexBuffer.Indices[index++] = y * (grid_size + 1) + x + 1;
+				IndexBuffer.Indices[index++] = y * (grid_size + 1) + x;
+				IndexBuffer.Indices[index++] = y * grid_size + x + 1;
+			}
+		}
 
-		//	const FVector TangentX = Edge01.GetSafeNormal();
-		//	const FVector TangentZ = (Edge02 ^ Edge01).GetSafeNormal();
-		//	const FVector TangentY = (TangentX ^ TangentZ).GetSafeNormal();
+		// Init vertex factory
+		VertexFactory.Init(&VertexBuffer);
 
-		//	FDynamicMeshVertex Vert;
+		// Enqueue initialization of render resource
+		BeginInitResource(&VertexBuffer);
+		BeginInitResource(&IndexBuffer);
+		BeginInitResource(&VertexFactory);
 
-		//	Vert.Color = VertexColor;
-		//	Vert.SetTangents(TangentX, TangentY, TangentZ);
-
-		//	Vert.Position = Tri.Vertex0;
-		//	VertexBuffer.Vertices[TriIdx * 3 + 0] = Vert;
-		//	IndexBuffer.Indices[TriIdx * 3 + 0] = TriIdx * 3 + 0;
-
-		//	Vert.Position = Tri.Vertex1;
-		//	VertexBuffer.Vertices[TriIdx * 3 + 1] = Vert;
-		//	IndexBuffer.Indices[TriIdx * 3 + 1] = TriIdx * 3 + 1;
-
-		//	Vert.Position = Tri.Vertex2;
-		//	VertexBuffer.Vertices[TriIdx * 3 + 2] = Vert;
-		//	IndexBuffer.Indices[TriIdx * 3 + 2] = TriIdx * 3 + 2;
-		//}
-
-		//// Init vertex factory
-		//VertexFactory.Init(&VertexBuffer);
-
-		//// Enqueue initialization of render resource
-		//BeginInitResource(&VertexBuffer);
-		//BeginInitResource(&IndexBuffer);
-		//BeginInitResource(&VertexFactory);
-
-		//// Grab material
-		//Material = Component->GetMaterial(0);
-		//if (Material == NULL)
-		//{
-		//	Material = UMaterial::GetDefaultMaterial(MD_Surface);
-		//}
+		// Grab material
+		Material = Component->GetMaterial(0);
+		if (Material == NULL)
+		{
+			Material = UMaterial::GetDefaultMaterial(MD_Surface);
+		}
 	}
 
 	virtual ~FOceanMeshSceneProxy()
@@ -255,6 +255,9 @@ private:
 };
 
 //////////////////////////////////////////////////////////////////////////
+#pragma comment (lib, "libfftw3-3.lib")
+#pragma comment (lib, "libfftw3f-3.lib")
+#pragma comment (lib, "libfftw3l-3.lib")
 
 UOceanMeshComponent::UOceanMeshComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)

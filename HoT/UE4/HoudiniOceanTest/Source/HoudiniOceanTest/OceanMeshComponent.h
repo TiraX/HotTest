@@ -14,7 +14,6 @@ UCLASS(hidecategories = (Object, LOD, Physics, Collision), editinlinenew, meta =
 class HOUDINIOCEANTEST_API UOceanMeshComponent : public UMeshComponent
 {
 	GENERATED_UCLASS_BODY()
-	
 
 private:
 
