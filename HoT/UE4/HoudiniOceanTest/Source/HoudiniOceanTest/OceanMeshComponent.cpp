@@ -15,6 +15,7 @@
 #include "DynamicMeshBuilder.h"
 #include "EngineGlobals.h"
 #include "Engine/Engine.h"
+#include "Ocean.h"
 
 
 const int grid_size = 512;
@@ -115,6 +116,8 @@ public:
 		VertexBuffer.Vertices.AddUninitialized(grid_size * grid_size);
 		IndexBuffer.Indices.AddUninitialized((grid_size - 1) * (grid_size - 1) * 2 * 3);
 
+		drw::OceanContext* _OceanContext = Component->_OceanContext;
+
 		// construct grid
 		const float uv_step = 1.f / grid_size;
 		for (int y = 0 ; y < grid_size ; ++ y)
@@ -123,11 +126,22 @@ public:
 			{
 				FDynamicMeshVertex vertex;
 				vertex.Position = FVector(x, y, 0.f);
+				_OceanContext->eval2_xz(x, y);
+
+				vertex.Position.X += _OceanContext->disp[0];
+				vertex.Position.Y += _OceanContext->disp[2];
+				vertex.Position.Z += _OceanContext->disp[1];
+
 				vertex.TextureCoordinate = FVector2D(x * uv_step, y * uv_step);
 
-				const FVector TangentZ = FVector(0, 0, 1);
-				const FVector TangentX = FVector(1, 0, 0);
-				const FVector TangentY = (TangentX ^ TangentZ).GetSafeNormal();
+				const FVector TangentZ = FVector(_OceanContext->normal[0], _OceanContext->normal[2], _OceanContext->normal[1]);
+				const FVector VecHor = FVector(1, 0, 0);
+				const FVector TangentY = (VecHor ^ TangentZ).GetSafeNormal();
+				const FVector TangentX = (TangentY ^ TangentZ).GetSafeNormal();
+
+				//const FVector TangentZ = FVector(0, 0, 1);
+				//const FVector TangentX = FVector(1, 0, 0);
+				//const FVector TangentY = (TangentX ^ TangentZ).GetSafeNormal();
 
 				vertex.SetTangents(TangentX, TangentY, TangentZ);
 				vertex.Color = FColor::Black;
@@ -141,12 +155,12 @@ public:
 			for (int x = 0; x < grid_size - 1; ++x)
 			{
 				IndexBuffer.Indices[index++] = y * grid_size + x;
+				IndexBuffer.Indices[index++] = (y + 1) * grid_size + x;
 				IndexBuffer.Indices[index++] = y * grid_size + x + 1;
-				IndexBuffer.Indices[index++] = y * (grid_size + 1) + x;
 
-				IndexBuffer.Indices[index++] = y * (grid_size + 1) + x + 1;
-				IndexBuffer.Indices[index++] = y * (grid_size + 1) + x;
+				IndexBuffer.Indices[index++] = (y + 1) * grid_size + x + 1;
 				IndexBuffer.Indices[index++] = y * grid_size + x + 1;
+				IndexBuffer.Indices[index++] = (y + 1) * grid_size + x;
 			}
 		}
 
@@ -259,12 +273,50 @@ private:
 #pragma comment (lib, "libfftw3f-3.lib")
 #pragma comment (lib, "libfftw3l-3.lib")
 
+
 UOceanMeshComponent::UOceanMeshComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
+	, _Ocean(nullptr)
+	, _OceanContext(nullptr)
+	, bChop(true)
+	, bJacobian(true)
+	, WindSpeed(30.f)
+	, WindDirection(0.f)
+	, WaveHeight(50.f)
+	, ShortestWaveLength(0.05f)
+	, Damp(0.6f)
+	, WindAlign(2)
+	, Depth(200.f)
+	, Choppyness(1.6f)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 
 	SetCollisionProfileName(UCollisionProfile::BlockAllDynamic_ProfileName);
+
+	int gridres = 1 << GridRes;
+	float stepsize = grid_size / (float)gridres;
+	_Ocean = new drw::Ocean(gridres, gridres, stepsize, stepsize,
+		WindSpeed, ShortestWaveLength, WaveHeight, WindDirection, Damp, WindAlign, Depth, 12306);
+	float OceanScale = _Ocean->get_height_normalize_factor();
+
+	_OceanContext = _Ocean->new_context(true, bChop, true, bJacobian);
+
+
+	// sum up the waves at this timestep
+	_Ocean->update(0.f, *_OceanContext, true, bChop, true, bJacobian, OceanScale, Choppyness);
+}
+
+UOceanMeshComponent::~UOceanMeshComponent()
+{
+	if (_Ocean)
+	{
+		delete _Ocean;
+	}
+
+	if (_OceanContext)
+	{
+		delete _OceanContext;
+	}
 }
 
 FPrimitiveSceneProxy* UOceanMeshComponent::CreateSceneProxy()
@@ -282,9 +334,9 @@ int32 UOceanMeshComponent::GetNumMaterials() const
 FBoxSphereBounds UOceanMeshComponent::CalcBounds(const FTransform& LocalToWorld) const
 {
 	FBoxSphereBounds NewBounds;
-	NewBounds.Origin = FVector::ZeroVector;
-	NewBounds.BoxExtent = FVector(HALF_WORLD_MAX, HALF_WORLD_MAX, HALF_WORLD_MAX);
-	NewBounds.SphereRadius = FMath::Sqrt(3.0f * FMath::Square(HALF_WORLD_MAX));
+	NewBounds.Origin = FVector(grid_size * 0.5f, grid_size * 0.5f, 0.f);
+	NewBounds.BoxExtent = FVector(grid_size * 0.5f, grid_size * 0.5f, 1.f);
+	NewBounds.SphereRadius = FMath::Sqrt(3.0f * FMath::Square(grid_size * 0.5f));
 	return NewBounds;
 }
 

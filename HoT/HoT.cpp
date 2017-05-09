@@ -147,7 +147,7 @@ int main()
 			v = vec3(v.x + _ocean_context->disp[0], v.y + _ocean_context->disp[1], v.z + _ocean_context->disp[2]);
 
 			vec3& n = normal[x][y];
-			n = vec3(_ocean_context->normal[0], _ocean_context->normal[2], _ocean_context->normal[2]);
+			n = vec3(_ocean_context->normal[0], _ocean_context->normal[1], _ocean_context->normal[2]);
 			n.normalize();
 		}
 	}
