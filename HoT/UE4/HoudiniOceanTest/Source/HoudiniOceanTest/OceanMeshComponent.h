@@ -27,6 +27,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int	GridRes;
 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int	GridSize;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bChop;
 
@@ -59,11 +63,15 @@ public:
 
 	/** Affects the spectrum of waves generated. Visually in doesn’t seem to have that great an influence. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	float Depth;
+		float Depth;
 
 	/**	The amount of chop displacenemnt that is applied to the input points. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float Choppyness;
+
+	/**	The amount of scale for all vertices. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float WaveScale;
 private:
 
 	//~ Begin UPrimitiveComponent Interface.
@@ -80,7 +88,4 @@ private:
 
 
 	friend class FOceanMeshSceneProxy;
-
-	drw::Ocean*	_Ocean;
-	drw::OceanContext*	_OceanContext;
 };

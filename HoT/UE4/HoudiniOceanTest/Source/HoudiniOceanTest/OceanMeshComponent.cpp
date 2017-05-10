@@ -18,7 +18,7 @@
 #include "Ocean.h"
 
 
-const int grid_size = 512;
+const int _grid_size = 512;
 
 /** Vertex Buffer */
 class FOceanMeshVertexBuffer : public FVertexBuffer
@@ -107,34 +107,54 @@ class FOceanMeshSceneProxy : public FPrimitiveSceneProxy
 {
 public:
 
+	drw::Ocean*	_Ocean;
+	drw::OceanContext*	_OceanContext;
+
 	FOceanMeshSceneProxy(UOceanMeshComponent* Component)
 		: FPrimitiveSceneProxy(Component)
 		, MaterialRelevance(Component->GetMaterialRelevance(GetScene().GetFeatureLevel()))
+		, _Ocean(nullptr)
+		, _OceanContext(nullptr)
 	{
 		const FColor VertexColor(255, 255, 255);
 
-		VertexBuffer.Vertices.AddUninitialized(grid_size * grid_size);
-		IndexBuffer.Indices.AddUninitialized((grid_size - 1) * (grid_size - 1) * 2 * 3);
+		VertexBuffer.Vertices.AddUninitialized(Component->GridSize * Component->GridSize);
+		IndexBuffer.Indices.AddUninitialized((Component->GridSize - 1) * (Component->GridSize - 1) * 2 * 3);
 
-		drw::OceanContext* _OceanContext = Component->_OceanContext;
+		// create things
+		int gridres = 1 << Component->GridRes;
+		float stepsize = Component->GridSize / (float)gridres;
+		_Ocean = new drw::Ocean(gridres, gridres, stepsize, stepsize,
+			Component->WindSpeed, Component->ShortestWaveLength, Component->WaveHeight, Component->WindDirection, 
+			Component->Damp, Component->WindAlign, Component->Depth, 12306);
+		float OceanScale = _Ocean->get_height_normalize_factor();
+
+		_OceanContext = _Ocean->new_context(true, Component->bChop, true, Component->bJacobian);
+
+
+		// sum up the waves at this timestep
+		_Ocean->update(0.f, *_OceanContext, true, Component->bChop, true, Component->bJacobian, OceanScale, Component->Choppyness);
+
+		const float gridScale = _grid_size / Component->GridSize;
 
 		// construct grid
-		const float uv_step = 1.f / grid_size;
-		for (int y = 0 ; y < grid_size ; ++ y)
+		const float uv_step = 1.f / Component->GridSize;
+		for (int y = 0 ; y < Component->GridSize; ++ y)
 		{
-			for (int x = 0 ; x < grid_size ; ++ x)
+			for (int x = 0 ; x < Component->GridSize; ++ x)
 			{
 				FDynamicMeshVertex vertex;
-				vertex.Position = FVector(x, y, 0.f);
-				_OceanContext->eval2_xz(x, y);
+				vertex.Position = FVector(x * gridScale, y * gridScale, 0.f);
+				_OceanContext->eval2_xz(x * gridScale, y * gridScale);
 
-				vertex.Position.X += _OceanContext->disp[0];
-				vertex.Position.Y += _OceanContext->disp[2];
-				vertex.Position.Z += _OceanContext->disp[1];
+				vertex.Position.X += _OceanContext->disp[0] * Component->WaveScale;
+				vertex.Position.Y += _OceanContext->disp[2] * Component->WaveScale;
+				vertex.Position.Z += _OceanContext->disp[1] * Component->WaveScale;
 
 				vertex.TextureCoordinate = FVector2D(x * uv_step, y * uv_step);
 
-				const FVector TangentZ = FVector(_OceanContext->normal[0], _OceanContext->normal[2], _OceanContext->normal[1]);
+				FVector TangentZ = FVector(_OceanContext->normal[0], _OceanContext->normal[2], _OceanContext->normal[1]);
+				TangentZ.Normalize();
 				const FVector VecHor = FVector(1, 0, 0);
 				const FVector TangentY = (VecHor ^ TangentZ).GetSafeNormal();
 				const FVector TangentX = (TangentY ^ TangentZ).GetSafeNormal();
@@ -146,21 +166,21 @@ public:
 				vertex.SetTangents(TangentX, TangentY, TangentZ);
 				vertex.Color = FColor::Black;
 
-				VertexBuffer.Vertices[y * grid_size + x] = vertex;
+				VertexBuffer.Vertices[y * Component->GridSize + x] = vertex;
 			}
 		}
 		int index = 0;
-		for (int y = 0; y < grid_size - 1; ++y)
+		for (int y = 0; y < Component->GridSize - 1; ++y)
 		{
-			for (int x = 0; x < grid_size - 1; ++x)
+			for (int x = 0; x < Component->GridSize - 1; ++x)
 			{
-				IndexBuffer.Indices[index++] = y * grid_size + x;
-				IndexBuffer.Indices[index++] = (y + 1) * grid_size + x;
-				IndexBuffer.Indices[index++] = y * grid_size + x + 1;
+				IndexBuffer.Indices[index++] = y * Component->GridSize + x;
+				IndexBuffer.Indices[index++] = (y + 1) * Component->GridSize + x;
+				IndexBuffer.Indices[index++] = y * Component->GridSize + x + 1;
 
-				IndexBuffer.Indices[index++] = (y + 1) * grid_size + x + 1;
-				IndexBuffer.Indices[index++] = y * grid_size + x + 1;
-				IndexBuffer.Indices[index++] = (y + 1) * grid_size + x;
+				IndexBuffer.Indices[index++] = (y + 1) * Component->GridSize + x + 1;
+				IndexBuffer.Indices[index++] = y * Component->GridSize + x + 1;
+				IndexBuffer.Indices[index++] = (y + 1) * Component->GridSize + x;
 			}
 		}
 
@@ -185,6 +205,15 @@ public:
 		VertexBuffer.ReleaseResource();
 		IndexBuffer.ReleaseResource();
 		VertexFactory.ReleaseResource();
+
+		if (_OceanContext)
+		{
+			delete _OceanContext;
+		}
+		if (_Ocean)
+		{
+			delete _Ocean;
+		}
 	}
 
 	virtual void GetDynamicMeshElements(const TArray<const FSceneView*>& Views, const FSceneViewFamily& ViewFamily, uint32 VisibilityMap, FMeshElementCollector& Collector) const override
@@ -276,10 +305,10 @@ private:
 
 UOceanMeshComponent::UOceanMeshComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, _Ocean(nullptr)
-	, _OceanContext(nullptr)
 	, bChop(true)
 	, bJacobian(true)
+	, GridRes(8)
+	, GridSize(512)
 	, WindSpeed(30.f)
 	, WindDirection(0.f)
 	, WaveHeight(50.f)
@@ -288,35 +317,16 @@ UOceanMeshComponent::UOceanMeshComponent(const FObjectInitializer& ObjectInitial
 	, WindAlign(2)
 	, Depth(200.f)
 	, Choppyness(1.6f)
+	, WaveScale(1.f)
 {
 	PrimaryComponentTick.bCanEverTick = false;
 
 	SetCollisionProfileName(UCollisionProfile::BlockAllDynamic_ProfileName);
 
-	int gridres = 1 << GridRes;
-	float stepsize = grid_size / (float)gridres;
-	_Ocean = new drw::Ocean(gridres, gridres, stepsize, stepsize,
-		WindSpeed, ShortestWaveLength, WaveHeight, WindDirection, Damp, WindAlign, Depth, 12306);
-	float OceanScale = _Ocean->get_height_normalize_factor();
-
-	_OceanContext = _Ocean->new_context(true, bChop, true, bJacobian);
-
-
-	// sum up the waves at this timestep
-	_Ocean->update(0.f, *_OceanContext, true, bChop, true, bJacobian, OceanScale, Choppyness);
 }
 
 UOceanMeshComponent::~UOceanMeshComponent()
 {
-	if (_Ocean)
-	{
-		delete _Ocean;
-	}
-
-	if (_OceanContext)
-	{
-		delete _OceanContext;
-	}
 }
 
 FPrimitiveSceneProxy* UOceanMeshComponent::CreateSceneProxy()
@@ -334,9 +344,9 @@ int32 UOceanMeshComponent::GetNumMaterials() const
 FBoxSphereBounds UOceanMeshComponent::CalcBounds(const FTransform& LocalToWorld) const
 {
 	FBoxSphereBounds NewBounds;
-	NewBounds.Origin = FVector(grid_size * 0.5f, grid_size * 0.5f, 0.f);
-	NewBounds.BoxExtent = FVector(grid_size * 0.5f, grid_size * 0.5f, 1.f);
-	NewBounds.SphereRadius = FMath::Sqrt(3.0f * FMath::Square(grid_size * 0.5f));
+	NewBounds.Origin = FVector(0.f, 0.f, 0.f);
+	NewBounds.BoxExtent = FVector(_grid_size, _grid_size, 1.f);
+	NewBounds.SphereRadius = FMath::Sqrt(3.0f * FMath::Square(_grid_size));
 	return NewBounds;
 }
 
