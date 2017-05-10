@@ -113,6 +113,8 @@ int main()
 	float depth = 200.f;
 	float seed = 0.f;
 	float chop_amount = 1.78f;// CHOPAMOUNT(now);
+	float wave_scale = 20.f;
+	float normal_scale = -1.f;
 
 	// init grid & normals
 	for (int y = 0 ; y < grid_size ; ++ y)
@@ -144,10 +146,10 @@ int main()
 		{
 			vec3& v = grid[x][y];
 			_ocean_context->eval2_xz(v.x, v.z);
-			v = vec3(v.x + _ocean_context->disp[0], v.y + _ocean_context->disp[1], v.z + _ocean_context->disp[2]);
+			v = vec3(v.x + _ocean_context->disp[0] * wave_scale, v.y + _ocean_context->disp[1] * wave_scale, v.z + _ocean_context->disp[2]);
 
 			vec3& n = normal[x][y];
-			n = vec3(_ocean_context->normal[0], _ocean_context->normal[1], _ocean_context->normal[2]);
+			n = vec3(_ocean_context->normal[0] * normal_scale, _ocean_context->normal[1] * normal_scale, _ocean_context->normal[2] * normal_scale);
 			n.normalize();
 		}
 	}
