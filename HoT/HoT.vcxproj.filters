@@ -23,12 +23,18 @@
     <ClInclude Include="Ocean.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="FFTTest.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="HoT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="FFTTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
