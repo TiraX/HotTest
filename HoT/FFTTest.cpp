@@ -130,6 +130,57 @@ vec recursive_fft(const vec& a)
 	return y;
 }
 
+vector<int> bf;
+
+int rev_bit(int k, int n)
+{
+	int k0 = 0, m = log((double)n) / log((double)2);
+	for (int j = 0; j < m; ++j)
+	{
+		if (k&(1 << j))k0 += (1 << (m - 1 - j));
+	}
+	return k0;
+}
+
+void bitReverseCopy(const vec& src, vec &dest)
+{
+	int n = src.size();
+	for (int k = 0; k <= n - 1; ++k) dest[bf[k]] = src[k];
+}
+vec iteration_fft(const vec& a1)
+{
+	vec y;
+
+	vec a;
+	a.resize(a1.size());
+	bitReverseCopy(a1, a);
+
+	int n = a.size();
+	int s, m, k, j, mh;
+	int sn = log2(n);
+	m = 1;
+	y.resize(n);
+	for (s = 1 ; s <= sn ; ++ s)
+	{
+		mh = m;
+		m *= 2;
+		TiComplex wm(cos(PI2 / m), sin(PI2 / m));
+		for (k = 0 ; k < n ; k += m)
+		{
+			TiComplex w(1);
+			for (j = 0 ; j < mh; ++ j)
+			{
+				TiComplex t = w * a[k + j + mh];
+				TiComplex u = a[k + j];
+				y[k + j] = u + t;
+				y[k + j + mh] = u - t;
+				w = w * wm;
+			}
+		}
+	}
+	return y;
+}
+
 
 void print_vec(const vec& v)
 {
@@ -159,12 +210,20 @@ void time_test(const vec& a)
 		y = recursive_fft(a);
 	}
 	t_end = timeGetTime();
-	printf("fft time is %lld.\n", t_end - t_start);
+	printf("fft0 time is %lld.\n", t_end - t_start);
+	t_start = timeGetTime();
+	for (int i = 0; i < times; ++i)
+	{
+		y = iteration_fft(a);
+	}
+	t_end = timeGetTime();
+	printf("fft1 time is %lld.\n", t_end - t_start);
 }
 
 void do_fft_test()
 {
-	int size = 512;
+	int size = 8;
+	// prepare src array
 	vec a;
 	a.clear();
 	for (int i = 0 ; i < size; ++ i)
@@ -172,12 +231,20 @@ void do_fft_test()
 		TiComplex c(i + 1);
 		a.push_back(c);
 	}
+	// prepare butterfly help array
+	bf.clear();
+	for (int k = 0 ; k < size ; ++ k)
+	{
+		bf.push_back(rev_bit(k, size));
+	}
 
 	vec y_dft = dft(a);
-	vec y_fft = recursive_fft(a);
+	vec y_fft0 = recursive_fft(a);
+	vec y_fft1 = iteration_fft(a);
 
-	//print_vec(y_dft);
-	//print_vec(y_fft);
+	print_vec(y_dft);
+	print_vec(y_fft0);
+	print_vec(y_fft1);
 
 	time_test(a);
 }
