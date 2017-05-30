@@ -10,8 +10,10 @@
 #include <fstream>
 
 #include "FFTTest.h"
+#include "ImageTga.h"
 
 using namespace std;
+using namespace drw;
 
 struct vec3
 {
@@ -96,13 +98,13 @@ void export_as_obj()
 
 int main()
 {
-	do_fft_test();
-	return 0;
+	//do_fft_test();
+	//return 0;
 
 	drw::Ocean* _ocean;
 	drw::OceanContext* _ocean_context;
 
-	int   gridres = 1 << 8;	// 256
+	int   gridres = 1 << 9;	// 256
 	float stepsize = grid_size / (float)gridres;
 
 	bool do_chop = true; 
@@ -144,6 +146,112 @@ int main()
 	_ocean->update(0.f, *_ocean_context, true, do_chop, do_normals, do_jacobian,
 		_ocean_scale * 1.f, chop_amount);
 
+	// output image before fft
+	TiImage image_tmp;
+	image_tmp.w = _ocean_context->_M;
+	image_tmp.h = _ocean_context->_N;
+	image_tmp.data = new float[image_tmp.w * image_tmp.h];
+	image_tmp.imagi = new float[image_tmp.w * image_tmp.h];
+	memset(image_tmp.data, 0, image_tmp.w * image_tmp.h * 4);
+	memset(image_tmp.imagi, 0, image_tmp.w * image_tmp.h * 4);
+
+	float nmax, nmin;
+	nmax = -999999999.f;
+	nmin = 999999999.f;
+	for (int j = 0; j <= _ocean_context->_N / 2; ++j)
+	{
+		// note the <= _N/2 here, see the fftw doco about
+		// the mechanics of the complex->real fft storage
+		int offset = j * _ocean_context->_M;
+		for (int i = 0; i < _ocean_context->_M; ++i)
+		{
+			const complex_f& c = _ocean_context->_htilda(i, j);
+			image_tmp.data[offset + i] = c.real();
+			image_tmp.imagi[offset + i] = c.imag();
+			if (c.real() > nmax)
+				nmax = c.real();
+			if (c.real() < nmin)
+				nmin = c.real();
+
+			//_ocean_context._htilda(i, j) = _h0(i, j) * exp(complex_f(0, omega(_k(i, j))*t)) +
+			//	conj(_h0_minus(i, j)) * exp(complex_f(0, -omega(_k(i, j))*t));
+		}
+	}
+	for (int j = _ocean_context->_N / 2 + 1; j < _ocean_context->_N; ++j)
+	{
+		// note the <= _N/2 here, see the fftw doco about
+		// the mechanics of the complex->real fft storage
+		int offset = j * _ocean_context->_M;
+		for (int i = 0; i < _ocean_context->_M; ++i)
+		{
+			const complex_f& c = _ocean_context->_htilda(i, _ocean_context->_N - j - 1);
+			image_tmp.data[offset + i] = c.real();
+			image_tmp.imagi[offset + i] = -c.imag();
+
+			//_ocean_context._htilda(i, j) = _h0(i, j) * exp(complex_f(0, omega(_k(i, j))*t)) +
+			//	conj(_h0_minus(i, j)) * exp(complex_f(0, -omega(_k(i, j))*t));
+		}
+	}
+
+	for (int i = 0; i < image_tmp.w * image_tmp.h; i++)
+	{
+		//image_tmp.data[i] *= _ocean_scale;
+	}
+
+
+
+
+	// do my transform
+	TiImage my_trans;
+	ifft_image(image_tmp, my_trans);
+
+	// save locally
+	float f = 1.f / (nmax - nmin);
+	for (int i = 0; i < image_tmp.w * image_tmp.h; i++)
+	{
+		image_tmp.data[i] = (image_tmp.data[i] - nmin) * f;
+	}
+	saveToImage("test_before_fft.tga", image_tmp);
+
+	/*
+	printf("mine.\n");
+	for (int j = 0; j < my_trans.h; j++)
+	{
+		for (int i = 0; i < my_trans.w; i += 8)
+		{
+			printf("%f %f %f %f %f %f %f %f \n",
+				my_trans.data[j * my_trans.w + i + 0],
+				my_trans.data[j * my_trans.w + i + 1],
+				my_trans.data[j * my_trans.w + i + 2],
+				my_trans.data[j * my_trans.w + i + 3],
+				my_trans.data[j * my_trans.w + i + 4],
+				my_trans.data[j * my_trans.w + i + 5],
+				my_trans.data[j * my_trans.w + i + 6],
+				my_trans.data[j * my_trans.w + i + 7]);
+		}
+		printf("==============\n");
+	}
+
+
+	printf("theirs.\n");
+	for (int j = 0; j < grid_size; j++)
+	{
+		for (int i = 0; i < grid_size; i += 8)
+		{
+			printf("%f %f %f %f %f %f %f %f \n", 
+				_ocean_context->_disp_y(i + 0, j),
+				_ocean_context->_disp_y(i + 1, j),
+				_ocean_context->_disp_y(i + 2, j),
+				_ocean_context->_disp_y(i + 3, j),
+				_ocean_context->_disp_y(i + 4, j),
+				_ocean_context->_disp_y(i + 5, j),
+				_ocean_context->_disp_y(i + 6, j),
+				_ocean_context->_disp_y(i + 7, j));
+		}
+		printf("==============\n");
+	}
+	//*/
+
 	// for each vertex, calculate vertices
 	for (int y = 0; y < grid_size; ++y)
 	{
@@ -151,7 +259,9 @@ int main()
 		{
 			vec3& v = grid[x][y];
 			_ocean_context->eval2_xz(v.x, v.z);
-			v = vec3(v.x + _ocean_context->disp[0] * wave_scale, v.y + _ocean_context->disp[1] * wave_scale, v.z + _ocean_context->disp[2]);
+			//v = vec3(v.x + _ocean_context->disp[0] * wave_scale, v.y + _ocean_context->disp[1] * wave_scale, v.z + _ocean_context->disp[2]);
+			//v = vec3(v.x, v.y + _ocean_context->disp[1] * wave_scale, v.z);
+			v = vec3(v.x, v.y + my_trans.data[y * my_trans.w + x] * wave_scale * 2.f, v.z);
 
 			vec3& n = normal[x][y];
 			n = vec3(_ocean_context->normal[0] * normal_scale, _ocean_context->normal[1] * normal_scale, _ocean_context->normal[2] * normal_scale);

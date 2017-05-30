@@ -795,7 +795,7 @@ class Ocean: public UsingThreadedFFTW
     return res;
   }
 
- protected:
+ public:
 
   friend class OceanContext;
 

@@ -152,6 +152,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FFTTest.h" />
+    <ClInclude Include="ImageTga.h" />
     <ClInclude Include="Ocean.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
@@ -159,6 +160,7 @@
   <ItemGroup>
     <ClCompile Include="FFTTest.cpp" />
     <ClCompile Include="HoT.cpp" />
+    <ClCompile Include="ImageTga.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

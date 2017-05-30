@@ -3,6 +3,7 @@
 
 #include "stdafx.h"
 #include "FFTTest.h"
+#include "ImageTga.h"
 
 #include <vector>
 #include <windows.h>
@@ -41,6 +42,13 @@ public:
 	{
 		A += o.A;
 		B += o.B;
+		return *this;
+	}
+
+	TiComplex& operator *= (float o)
+	{
+		A *= o;
+		B *= o;
 		return *this;
 	}
 
@@ -147,11 +155,8 @@ void bitReverseCopy(const vec& src, vec &dest)
 	int n = src.size();
 	for (int k = 0; k <= n - 1; ++k) dest[bf[k]] = src[k];
 }
-vec iteration_fft(const vec& a1)
+void iteration_fft(const vec& a1, vec& a)
 {
-	vec y;
-
-	vec a;
 	a.resize(a1.size());
 	bitReverseCopy(a1, a);
 
@@ -159,7 +164,6 @@ vec iteration_fft(const vec& a1)
 	int s, m, k, j, mh;
 	int sn = log2(n);
 	m = 1;
-	y.resize(n);
 	for (s = 1 ; s <= sn ; ++ s)
 	{
 		mh = m;
@@ -172,13 +176,47 @@ vec iteration_fft(const vec& a1)
 			{
 				TiComplex t = w * a[k + j + mh];
 				TiComplex u = a[k + j];
+				a[k + j] = u + t;
+				a[k + j + mh] = u - t;
+				w = w * wm;
+			}
+		}
+	}
+}
+
+void iteration_ifft(const vec& y1, vec& y)
+{
+	y.resize(y1.size());
+	bitReverseCopy(y1, y);
+
+	int n = y.size();
+	int s, m, k, j, mh;
+	int sn = log2(n);
+	m = 1;
+	for (s = 1; s <= sn; ++s)
+	{
+		mh = m;
+		m *= 2;
+		TiComplex wm(cos(-PI2 / m), sin(-PI2 / m));
+		for (k = 0; k < n; k += m)
+		{
+			TiComplex w(1);
+			for (j = 0; j < mh; ++j)
+			{
+				TiComplex t = w * y[k + j + mh];
+				TiComplex u = y[k + j];
 				y[k + j] = u + t;
 				y[k + j + mh] = u - t;
 				w = w * wm;
 			}
 		}
 	}
-	return y;
+
+	const float inv_n = 1.f / n;
+	for (k = 0; k < n; k++)
+	{
+		y[k] *= inv_n;
+	}
 }
 
 
@@ -214,15 +252,156 @@ void time_test(const vec& a)
 	t_start = timeGetTime();
 	for (int i = 0; i < times; ++i)
 	{
-		y = iteration_fft(a);
+		iteration_fft(a, y);
 	}
 	t_end = timeGetTime();
 	printf("fft1 time is %lld.\n", t_end - t_start);
 }
 
-void do_fft_test()
+void test_image()
 {
-	int size = 8;
+	int size = 512;
+
+	// load image
+	TiImage img;
+	loadImageTga("test.tga", img);
+	size = img.w;
+
+	saveToImage("test_o.tga", img);
+
+	// prepare butterfly help array
+	bf.clear();
+	for (int k = 0; k < size; ++k)
+	{
+		bf.push_back(rev_bit(k, size));
+	}
+
+	long long t_start = timeGetTime();
+	// line fft
+	vec *lines = new vec[img.h];
+	vec line;
+	line.resize(img.w);
+	for (int y = 0; y < img.h; y++)
+	{
+		// gather data
+		for (int x = 0; x < img.w; x++)
+		{
+			TiComplex a(img.data[y * img.w + x]);
+			line[x] = a;
+		}
+
+		// do fft
+		iteration_fft(line, lines[y]);
+	}
+	long long t_end = timeGetTime();
+	printf("line finished %lld.\n", t_end - t_start);
+
+	vec* cols = new vec[img.w];
+	t_start = t_end;
+	for (int x = 0; x < img.w; x++)
+	{
+		// gather data
+		for (int y = 0; y < img.h; y++)
+		{
+			line[y] = lines[y][x];
+		}
+
+		// do fft
+		iteration_fft(line, cols[x]);
+	}
+	t_end = timeGetTime();
+	printf("cols finished %lld.\n", t_end - t_start);
+
+	print_vec(cols[0]);
+
+	//cols[0][0].A = 0.f;
+
+	// ifft
+	vec* ifft_lines = new vec[img.w];
+	for (int y = 0; y < img.h; y++)
+	{
+		ifft_lines[y].resize(img.w);
+	}
+	for (int x = 0; x < img.w; x++)
+	{
+		vec ifft_col;
+		iteration_ifft(cols[x], ifft_col);
+		for (int y = 0; y < img.h; y++)
+		{
+			ifft_lines[y][x] = ifft_col[y];
+		}
+	}
+	TiImage newImg;
+	newImg.w = img.w;
+	newImg.h = img.h;
+	newImg.data = new float[img.w * img.h];
+	for (int y = 0; y < img.h; y++)
+	{
+		vec ifft_line;
+		iteration_ifft(ifft_lines[y], ifft_line);
+		for (int x = 0; x < img.w; x++)
+		{
+			newImg.data[y * img.w + x] = ifft_line[x].A;
+		}
+	}
+
+	saveToImage("test_new.tga", newImg);
+
+	// try to output an image
+	// copy data
+	TiComplex nmax(-99999999999.f, -99999999999.f);
+	TiComplex nmin(99999999999.f, 99999999999.f);
+	TiImage img_real, img_imagi;
+
+	img_real.w = img_imagi.w = img.w;
+	img_real.h = img_imagi.h = img.h;
+
+	img_real.data = new float[img.w * img.h];
+	img_imagi.data = new float[img.w * img.h];
+
+	for (int y = 0; y < img.h; y++)
+	{
+		for (int x = 0; x < img.w; x++)
+		{
+			const TiComplex& n = cols[x][y];
+			img_real.data[y * img.w + x] = n.A;
+			img_imagi.data[y * img.w + x] = n.B;
+
+			if (x * y != 0)
+			{
+				if (n.A > nmax.A)
+					nmax.A = n.A;
+				if (n.B > nmax.B)
+					nmax.B = n.B;
+				if (n.A < nmin.A)
+					nmin.A = n.A;
+				if (n.B < nmin.B)
+					nmin.B = n.B;
+			}
+		}
+	}
+
+	// normalize
+	float a = 1.f / (nmax.A - nmin.A);
+	float b = 1.f / (nmax.B - nmin.B);
+	for (int y = 0; y < img.h; y++)
+	{
+		for (int x = 0; x < img.w; x++)
+		{
+			int offset = y * img.w + x;
+			img_real.data[offset] = (img_real.data[offset] - nmin.A) * a;
+			img_imagi.data[offset] = (img_imagi.data[offset] - nmin.B) * b;
+		}
+	}
+
+	saveToImage("test_real.tga", img_real);
+	saveToImage("test_imgi.tga", img_imagi);
+
+}
+
+void test_fft()
+{
+	int size = 4;
 	// prepare src array
 	vec a;
 	a.clear();
@@ -233,18 +412,75 @@ void do_fft_test()
 	}
 	// prepare butterfly help array
 	bf.clear();
-	for (int k = 0 ; k < size ; ++ k)
+	for (int k = 0; k < size; ++k)
 	{
 		bf.push_back(rev_bit(k, size));
 	}
 
 	vec y_dft = dft(a);
 	vec y_fft0 = recursive_fft(a);
-	vec y_fft1 = iteration_fft(a);
+	vec y_fft1;
+	iteration_fft(a, y_fft1);
+
+	vec ao;
+	iteration_ifft(y_fft1, ao);
 
 	print_vec(y_dft);
 	print_vec(y_fft0);
 	print_vec(y_fft1);
 
 	time_test(a);
+}
+
+void ifft_image(const TiImage& src, TiImage& dest)
+{
+	// prepare butterfly help array
+	bf.clear();
+	for (int k = 0; k < src.w; ++k)
+	{
+		bf.push_back(rev_bit(k, src.w));
+	}
+	// ifft
+	vec* ifft_lines = new vec[src.h];
+	// cols
+	vec* ifft_cols = new vec[src.w];
+	for (int x = 0; x < src.w; x++)
+	{
+		ifft_cols[x].resize(src.w);
+		ifft_lines[x].resize(src.h);
+		for (int y = 0; y < src.h; y++)
+		{
+			int offset = y * src.w + x;
+			ifft_cols[x][y] = TiComplex(src.data[offset], src.imagi[offset] );
+		}
+	}
+	for (int x = 0; x < src.w; x++)
+	{
+		vec ifft_col;
+		iteration_ifft(ifft_cols[x], ifft_col);
+		for (int y = 0; y < src.h; y++)
+		{
+			ifft_lines[y][x] = ifft_col[y];
+		}
+	}
+	// lines
+	dest.w = src.w;
+	dest.h = src.h;
+	dest.data = new float[src.w * src.h];
+	for (int y = 0; y < src.h; y++)
+	{
+		vec line;
+		iteration_ifft(ifft_lines[y], line);
+		for (int x = 0; x < src.w; x++)
+		{
+			dest.data[y * src.w + x] = line[x].A;
+		}
+	}
+}
+
+void do_fft_test()
+{
+	//test_fft();
+
+	test_image();
 }
