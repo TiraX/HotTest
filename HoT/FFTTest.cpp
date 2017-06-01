@@ -286,10 +286,10 @@ void iteration_ifft_dif(vec& a1, vec& a)
 }
 
 
-void print_vec(const vec& v)
+void print_vec(const char* name, const vec& v)
 {
 	int n = v.size();
-	printf("n = %d\n---------------\n", n);
+	printf("%s, n = %d\n---------------\n", name, n);
 	for (int i = 0 ; i < n; ++ i)
 	{
 		printf("  %f + i * %f\n", v[i].A, v[i].B);
@@ -378,7 +378,7 @@ void test_image()
 	t_end = timeGetTime();
 	printf("cols finished %lld.\n", t_end - t_start);
 
-	print_vec(cols[0]);
+	print_vec("image", cols[0]);
 
 	//cols[0][0].A = 0.f;
 
@@ -492,18 +492,18 @@ void test_fft()
 	iteration_fft_dif(a1, y_fft2);
 
 	printf("fft test.\n");
-	print_vec(y_dft);
-	print_vec(y_fft0);
-	print_vec(y_fft1);
-	print_vec(y_fft2);
+	print_vec("dft", y_dft);
+	print_vec("fft recursive", y_fft0);
+	print_vec("fft dit", y_fft1);
+	print_vec("fft dif", y_fft2 );
 
 	vec ao, ao1;
 	iteration_ifft_dit(y_fft1, ao);
 	iteration_ifft_dif(y_fft2, ao1);
 
-	printf("ifft test.\n");
-	print_vec(ao);
-	print_vec(ao1);
+	printf("\nifft test.\n");
+	print_vec("ifft dit", ao);
+	print_vec("ifft dif", ao1);
 
 
 	time_test(a);
