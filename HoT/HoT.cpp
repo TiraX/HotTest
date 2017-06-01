@@ -98,8 +98,8 @@ void export_as_obj()
 
 int main()
 {
-	//do_fft_test();
-	//return 0;
+	do_fft_test();
+	return 0;
 
 	drw::Ocean* _ocean;
 	drw::OceanContext* _ocean_context;

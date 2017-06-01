@@ -155,7 +155,7 @@ void bitReverseCopy(const vec& src, vec &dest)
 	int n = src.size();
 	for (int k = 0; k <= n - 1; ++k) dest[bf[k]] = src[k];
 }
-void iteration_fft(const vec& a1, vec& a)
+void iteration_fft_dit(const vec& a1, vec& a)
 {
 	a.resize(a1.size());
 	bitReverseCopy(a1, a);
@@ -184,7 +184,7 @@ void iteration_fft(const vec& a1, vec& a)
 	}
 }
 
-void iteration_ifft(const vec& y1, vec& y)
+void iteration_ifft_dit(const vec& y1, vec& y)
 {
 	y.resize(y1.size());
 	bitReverseCopy(y1, y);
@@ -216,6 +216,72 @@ void iteration_ifft(const vec& y1, vec& y)
 	for (k = 0; k < n; k++)
 	{
 		y[k] *= inv_n;
+	}
+}
+
+void iteration_fft_dif(vec& a1, vec& a)
+{
+	int l = a1.size();
+	int p = log2(l);
+	int Bp = 1;
+	int Np = 1 << p;
+	for (int P = 0 ; P < p ; ++ P)
+	{
+		int Np1 = Np >> 1;
+		int BaseE = 0;
+		for (int b = 0 ; b < Bp ; ++ b)
+		{
+			int BaseO = BaseE + Np1;
+			for (int n = 0 ; n < Np1 ; ++ n)
+			{
+				TiComplex T(cos(PI2 * n / Np), sin(PI2 * n / Np));
+				TiComplex e = a1[BaseE + n] + a1[BaseO + n];
+				TiComplex o = (a1[BaseE + n] - a1[BaseO + n]) * T;
+				a1[BaseE + n] = e;
+				a1[BaseO + n] = o;
+			}
+			BaseE += Np;
+		}
+		Bp <<= 1;
+		Np >>= 1;
+	}
+	a.resize(l);
+	bitReverseCopy(a1, a);
+}
+
+void iteration_ifft_dif(vec& a1, vec& a)
+{
+	int l = a1.size();
+	int p = log2(l);
+	int Bp = 1;
+	int Np = 1 << p;
+	for (int P = 0; P < p; ++P)
+	{
+		int Np1 = Np >> 1;
+		int BaseE = 0;
+		for (int b = 0; b < Bp; ++b)
+		{
+			int BaseO = BaseE + Np1;
+			for (int n = 0; n < Np1; ++n)
+			{
+				TiComplex T(cos(-PI2 * n / Np), sin(-PI2 * n / Np));
+				TiComplex e = a1[BaseE + n] + a1[BaseO + n];
+				TiComplex o = (a1[BaseE + n] - a1[BaseO + n]) * T;
+				a1[BaseE + n] = e;
+				a1[BaseO + n] = o;
+			}
+			BaseE += Np;
+		}
+		Bp <<= 1;
+		Np >>= 1;
+	}
+	a.resize(l);
+	bitReverseCopy(a1, a);
+
+	const float inv_n = 1.f / l;
+	for (int k = 0; k < l; k++)
+	{
+		a[k] *= inv_n;
 	}
 }
 
@@ -252,7 +318,7 @@ void time_test(const vec& a)
 	t_start = timeGetTime();
 	for (int i = 0; i < times; ++i)
 	{
-		iteration_fft(a, y);
+		iteration_fft_dit(a, y);
 	}
 	t_end = timeGetTime();
 	printf("fft1 time is %lld.\n", t_end - t_start);
@@ -260,7 +326,7 @@ void time_test(const vec& a)
 
 void test_image()
 {
-	int size = 512;
+	int size = 4;
 
 	// load image
 	TiImage img;
@@ -291,7 +357,7 @@ void test_image()
 		}
 
 		// do fft
-		iteration_fft(line, lines[y]);
+		iteration_fft_dit(line, lines[y]);
 	}
 	long long t_end = timeGetTime();
 	printf("line finished %lld.\n", t_end - t_start);
@@ -307,7 +373,7 @@ void test_image()
 		}
 
 		// do fft
-		iteration_fft(line, cols[x]);
+		iteration_fft_dit(line, cols[x]);
 	}
 	t_end = timeGetTime();
 	printf("cols finished %lld.\n", t_end - t_start);
@@ -325,7 +391,7 @@ void test_image()
 	for (int x = 0; x < img.w; x++)
 	{
 		vec ifft_col;
-		iteration_ifft(cols[x], ifft_col);
+		iteration_ifft_dit(cols[x], ifft_col);
 		for (int y = 0; y < img.h; y++)
 		{
 			ifft_lines[y][x] = ifft_col[y];
@@ -338,7 +404,7 @@ void test_image()
 	for (int y = 0; y < img.h; y++)
 	{
 		vec ifft_line;
-		iteration_ifft(ifft_lines[y], ifft_line);
+		iteration_ifft_dit(ifft_lines[y], ifft_line);
 		for (int x = 0; x < img.w; x++)
 		{
 			newImg.data[y * img.w + x] = ifft_line[x].A;
@@ -401,7 +467,7 @@ void test_image()
 
 void test_fft()
 {
-	int size = 4;
+	int size = 8;
 	// prepare src array
 	vec a;
 	a.clear();
@@ -420,14 +486,25 @@ void test_fft()
 	vec y_dft = dft(a);
 	vec y_fft0 = recursive_fft(a);
 	vec y_fft1;
-	iteration_fft(a, y_fft1);
+	iteration_fft_dit(a, y_fft1);
+	vec a1 = a;
+	vec y_fft2;
+	iteration_fft_dif(a1, y_fft2);
 
-	vec ao;
-	iteration_ifft(y_fft1, ao);
-
+	printf("fft test.\n");
 	print_vec(y_dft);
 	print_vec(y_fft0);
 	print_vec(y_fft1);
+	print_vec(y_fft2);
+
+	vec ao, ao1;
+	iteration_ifft_dit(y_fft1, ao);
+	iteration_ifft_dif(y_fft2, ao1);
+
+	printf("ifft test.\n");
+	print_vec(ao);
+	print_vec(ao1);
+
 
 	time_test(a);
 }
@@ -457,7 +534,7 @@ void ifft_image(const TiImage& src, TiImage& dest)
 	for (int x = 0; x < src.w; x++)
 	{
 		vec ifft_col;
-		iteration_ifft(ifft_cols[x], ifft_col);
+		iteration_ifft_dit(ifft_cols[x], ifft_col);
 		for (int y = 0; y < src.h; y++)
 		{
 			ifft_lines[y][x] = ifft_col[y];
@@ -470,7 +547,7 @@ void ifft_image(const TiImage& src, TiImage& dest)
 	for (int y = 0; y < src.h; y++)
 	{
 		vec line;
-		iteration_ifft(ifft_lines[y], line);
+		iteration_ifft_dit(ifft_lines[y], line);
 		for (int x = 0; x < src.w; x++)
 		{
 			dest.data[y * src.w + x] = line[x].A;
@@ -480,7 +557,7 @@ void ifft_image(const TiImage& src, TiImage& dest)
 
 void do_fft_test()
 {
-	//test_fft();
+	test_fft();
 
-	test_image();
+	//test_image();
 }
