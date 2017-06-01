@@ -531,8 +531,8 @@ void test_fft()
 	printf("\nreal fft test.\n");
 	y_fft1.clear();
 	y_fft2.clear();
-	iteration_ifft_dit(a, y_fft1);
-	iteration_ifft_dit(b, y_fft2);
+	iteration_fft_dit(a, y_fft1);
+	iteration_fft_dit(b, y_fft2);
 
 	print_vec("fft1", y_fft1);
 	print_vec("fft2", y_fft2);
@@ -545,11 +545,17 @@ void test_fft()
 		real_c.push_back(c12);
 	}
 	vec real_fft;
-	iteration_ifft_dit(real_c, real_fft);
+	iteration_fft_dit(real_c, real_fft);
 	complex_to_real(real_fft, r_fft1, r_fft2);
 	print_vec("real_fft", real_fft);
 	print_vec("real_fft1", r_fft1);
 	print_vec("real_fft2", r_fft2);
+
+	vec fft21, fft22;
+	iteration_fft_dit(r_fft1, fft21);
+	iteration_ifft_dit(r_fft1, fft22);
+	print_vec("fft 21: ", fft21);
+	print_vec("fft 22: ", fft22);
 
 
 	time_test(a);
