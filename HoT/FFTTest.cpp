@@ -219,6 +219,22 @@ void iteration_ifft_dit(const vec& y1, vec& y)
 	}
 }
 
+void complex_to_real(const vec& c, vec& r1, vec& r2)
+{
+	int n = c.size();
+
+	r1.resize(n);
+	r2.resize(n);
+
+	r1[0] = c[0].A;
+	r2[0] = c[0].B;
+	for (int i = 1; i < n; i++)
+	{
+		r1[i] = TiComplex((c[i].A + c[n - i].A) / 2, (c[i].B - c[n - i].B) / 2);
+		r2[i] = TiComplex((c[i].B + c[n - i].B) / 2, (c[n - i].A - c[i].A) / 2);
+	}
+}
+
 void iteration_fft_dif(vec& a1, vec& a)
 {
 	int l = a1.size();
@@ -469,12 +485,19 @@ void test_fft()
 {
 	int size = 8;
 	// prepare src array
-	vec a;
+	vec a, b;
 	a.clear();
-	for (int i = 0 ; i < size; ++ i)
+	int i;
+	for (i = 0 ; i < size; ++ i)
 	{
 		TiComplex c(i + 1);
 		a.push_back(c);
+	}
+	b.clear();
+	for (; i < size * 2; i++)
+	{
+		TiComplex c(i + 1);
+		b.push_back(c);
 	}
 	// prepare butterfly help array
 	bf.clear();
@@ -504,6 +527,29 @@ void test_fft()
 	printf("\nifft test.\n");
 	print_vec("ifft dit", ao);
 	print_vec("ifft dif", ao1);
+
+	printf("\nreal fft test.\n");
+	y_fft1.clear();
+	y_fft2.clear();
+	iteration_ifft_dit(a, y_fft1);
+	iteration_ifft_dit(b, y_fft2);
+
+	print_vec("fft1", y_fft1);
+	print_vec("fft2", y_fft2);
+
+	vec r_fft1, r_fft2;
+	vec real_c;
+	for (int n = 0; n < size; n++)
+	{
+		TiComplex c12(a[n].A, b[n].A);
+		real_c.push_back(c12);
+	}
+	vec real_fft;
+	iteration_ifft_dit(real_c, real_fft);
+	complex_to_real(real_fft, r_fft1, r_fft2);
+	print_vec("real_fft", real_fft);
+	print_vec("real_fft1", r_fft1);
+	print_vec("real_fft2", r_fft2);
 
 
 	time_test(a);
