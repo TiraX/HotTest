@@ -72,6 +72,8 @@ public:
 	/**	The amount of scale for all vertices. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float WaveScale;
+
+	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 private:
 
 	//~ Begin UPrimitiveComponent Interface.

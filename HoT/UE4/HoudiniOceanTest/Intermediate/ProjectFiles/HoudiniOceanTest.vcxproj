@@ -559,6 +559,8 @@
     <NMakeOutput>..\..\Binaries\HTML5\HoudiniOceanTest-HTML5-Shipping.exe</NMakeOutput>
   </PropertyGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\Source\HoudiniOceanTest\OceanTextureComponent.cpp" />
+    <ClInclude Include="..\..\Source\HoudiniOceanTest\OceanTextureComponent.h" />
     <None Include="..\..\HoudiniOceanTest.uproject" />
     <None Include="..\..\Source\HoudiniOceanTest.Target.cs" />
     <None Include="..\..\Source\HoudiniOceanTestEditor.Target.cs" />

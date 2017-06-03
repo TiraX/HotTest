@@ -17,6 +17,9 @@
 #include "Engine/Engine.h"
 #include "Ocean.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogOceanMeshComp, Verbose, All);
+
+DEFINE_LOG_CATEGORY(LogOceanMeshComp);
 
 const int _grid_size = 512;
 
@@ -133,11 +136,16 @@ public:
 
 
 		// sum up the waves at this timestep
+		long long t_start = timeGetTime();
 		_Ocean->update(0.f, *_OceanContext, true, Component->bChop, true, Component->bJacobian, OceanScale, Component->Choppyness);
+		long long t_end = timeGetTime();
+
+		UE_LOG(LogOceanMeshComp, Log, TEXT("update time %d.\n"), int(t_end - t_start));
 
 		const float gridScale = _grid_size / Component->GridSize;
 
 		// construct grid
+		t_start = timeGetTime();
 		const float uv_step = 1.f / Component->GridSize;
 		for (int y = 0 ; y < Component->GridSize; ++ y)
 		{
@@ -183,6 +191,9 @@ public:
 				IndexBuffer.Indices[index++] = (y + 1) * Component->GridSize + x;
 			}
 		}
+		t_end = timeGetTime();
+
+		UE_LOG(LogOceanMeshComp, Log, TEXT("construct time %d.\n"), int(t_end - t_start));
 
 		// Init vertex factory
 		VertexFactory.Init(&VertexBuffer);
@@ -319,7 +330,9 @@ UOceanMeshComponent::UOceanMeshComponent(const FObjectInitializer& ObjectInitial
 	, Choppyness(1.6f)
 	, WaveScale(1.f)
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
+	bAutoActivate = true;
+	bTickInEditor = true;
 
 	SetCollisionProfileName(UCollisionProfile::BlockAllDynamic_ProfileName);
 
@@ -333,6 +346,12 @@ FPrimitiveSceneProxy* UOceanMeshComponent::CreateSceneProxy()
 {
 	FPrimitiveSceneProxy* Proxy = new FOceanMeshSceneProxy(this);
 	return Proxy;
+}
+
+void UOceanMeshComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
 }
 
 int32 UOceanMeshComponent::GetNumMaterials() const
@@ -349,7 +368,6 @@ FBoxSphereBounds UOceanMeshComponent::CalcBounds(const FTransform& LocalToWorld)
 	NewBounds.SphereRadius = FMath::Sqrt(3.0f * FMath::Square(_grid_size));
 	return NewBounds;
 }
-
 
 
 
