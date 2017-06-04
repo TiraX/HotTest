@@ -2,7 +2,11 @@
 
 #include "HoudiniOceanTest.h"
 #include "OceanTextureComponent.h"
-#include "Ocean.h"
+//#include "Ocean.h"
+#include "OceanTix.h"
+
+std::vector<int> FFT2D::bf;
+std::map<int, TiComplex> FFT2D::twiddleFactor;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogOceanTextureComponent, Verbose, All);
 DEFINE_LOG_CATEGORY(LogOceanTextureComponent);
@@ -88,7 +92,52 @@ void UOceanTextureComponent::SetupOcean()
 	_Ocean = new drw::Ocean(gridres, gridres, stepsize, stepsize,
 		WindSpeed, ShortestWaveLength, WaveHeight, WindDirection / 180.0f * PI,
 		1.f - Damp, WindAlign, Depth, 0);
-	OceanScale = _Ocean->get_height_normalize_factor();
+
+	static bool _debug = !false;
+	if (_debug)
+	{
+		for (int i = 0; i < gridres; ++i)
+		{
+			for (int j = 0; j < gridres; ++j)
+			{
+				const drw::complex_f& c = _Ocean->_h0(j, i);
+				UE_LOG(LogOceanTextureComponent, Log, TEXT("h0: (%d, %d), %f + i * %f."), j, i, c.real(), c.imag());
+			}
+		}
+		for (int i = 0; i < gridres; ++i)
+		{
+			for (int j = 0; j < gridres; ++j)
+			{
+				const drw::complex_f& c = _Ocean->_h0_minus(j, i);
+				UE_LOG(LogOceanTextureComponent, Log, TEXT("h0_minus: (%d, %d), %f + i * %f."), j, i, c.real(), c.imag());
+			}
+		}
+	}
+
+	drw::OceanContext *r = _Ocean->new_context(true, false, false, false);
+	OceanScale = _Ocean->get_height_normalize_factor_with_context(r);
+	//OceanScale = _Ocean->get_height_normalize_factor();
+
+	if (_debug)
+	{
+		for (int i = 0; i < gridres; ++i)
+		{
+			for (int j = 0; j < gridres; ++j)
+			{
+				const drw::complex_f& c = r->_htilda(j, i);
+				UE_LOG(LogOceanTextureComponent, Log, TEXT("_htilda: (%d, %d), %f + i * %f."), j, i, c.real(), c.imag());
+			}
+		}
+		for (int i = 0; i < gridres; ++i)
+		{
+			for (int j = 0; j < gridres; ++j)
+			{
+				const drw::complex_f& c = r->_disp_y(j, i);
+				UE_LOG(LogOceanTextureComponent, Log, TEXT("_disp_y: (%d, %d), %f + i * %f."), j, i, c.real(), c.imag());
+			}
+		}
+	}
+	delete r;
 
 	_OceanContext = _Ocean->new_context(true, bChop, true, bJacobian);
 
@@ -174,13 +223,13 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		return;
 
 	_Time += DeltaTime * SpeedScale ;
-	UE_LOG(LogOceanTextureComponent, Log, TEXT("time: %f.\n"), _Time);
+	UE_LOG(LogOceanTextureComponent, Log, TEXT("time: %f."), _Time);
 
 	// sum up the waves at this timestep
 	long long t_start = timeGetTime();
 	_Ocean->update(_Time, *_OceanContext, true, bChop, true, bJacobian, OceanScale, Choppyness);
 	long long t_end = timeGetTime();
-	UE_LOG(LogOceanTextureComponent, Log, TEXT("ocean update time: %d.\n"), int(t_end - t_start));
+	UE_LOG(LogOceanTextureComponent, Log, TEXT("ocean update time: %d."), int(t_end - t_start));
 
 	t_start = timeGetTime();
 	int size = OceanHeightTexture->GetSizeX();
@@ -237,8 +286,8 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		}
 	}
 	t_end = timeGetTime();
-	//UE_LOG(LogOceanTextureComponent, Log, TEXT("hmax: %f; hmin: %f.\n"), hmax, hmin);
-	UE_LOG(LogOceanTextureComponent, Log, TEXT("construct pixel time: %d.\n"), int(t_end - t_start));
+	//UE_LOG(LogOceanTextureComponent, Log, TEXT("hmax: %f; hmin: %f."), hmax, hmin);
+	UE_LOG(LogOceanTextureComponent, Log, TEXT("construct pixel time: %d."), int(t_end - t_start));
 
 	UpdateTextureRegions(OceanHeightTexture, 0, size * 4, 4, HeightFieldPixels, true);
 	UpdateTextureRegions(OceanNormalTexture, 0, size * 4, 4, NormalPixels, true);

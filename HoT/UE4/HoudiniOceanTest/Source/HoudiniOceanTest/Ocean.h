@@ -799,33 +799,38 @@ class Ocean: public UsingThreadedFFTW
   // controllable way to scale the height field than choosing
   // a meaningful A in the Phillips spectrum formula.
   // We use the result at t=0 to estimate the bounds.
+  float get_height_normalize_factor_with_context(OceanContext* r)
+  {
+	  update(0.0, *r, true, false, false, false, 1.0, 0.0);
+
+	  float res = 1.0;
+
+	  my_float max_h = std::numeric_limits<my_float>::min();
+
+	  for (int i = 0; i < r->_disp_y.rows(); ++i)
+	  {
+		  for (int j = 0; j < r->_disp_y.cols(); ++j)
+		  {
+			  max_h = std::max(max_h, fabsf(r->_disp_y(i, j)));
+		  }
+	  }
+
+	  if (max_h == 0.0) max_h = 0.00001f; // just in case ...
+
+	  res = 1.0f / max_h;
+
+	  return res;
+  }
   float get_height_normalize_factor()
   {
     OceanContext *r = new_context(true,false,false,false);
-    update(0.0,*r,true,false,false,false,1.0,0.0);
-
-    float res = 1.0;
-
-    my_float max_h = std::numeric_limits<my_float>::min( );
-
-    for (int i = 0 ; i < r->_disp_y.rows() ; ++i)
-    {
-      for (int j = 0 ; j  < r->_disp_y.cols()  ; ++j)
-      {
-        max_h = std::max(max_h,fabsf(r->_disp_y(i,j)));
-      }
-    }
-
-    if (max_h == 0.0) max_h = 0.00001f; // just in case ...
-
-    res = 1.0f / max_h;
-
+	float result = get_height_normalize_factor_with_context(r);
     delete r;
 
-    return res;
+    return result;
   }
 
- protected:
+ public:
 
   friend class OceanContext;
 

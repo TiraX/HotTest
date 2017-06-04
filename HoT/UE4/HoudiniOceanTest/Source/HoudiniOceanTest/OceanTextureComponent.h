@@ -72,7 +72,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float SpeedScale;
 
-	/**	The normal strenth along xy. */
+	/**	The normal strenth along xz. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float NormalStrength;
 
