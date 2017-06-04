@@ -1,61 +1,61 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
+
 <Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemGroup>
-    <None Include="..\..\HoudiniOceanTest.uproject" />
-    <Filter Include="Source">
-      <UniqueIdentifier>{ECE6631B-C89B-473C-B76B-7B8AEEAEFE20}</UniqueIdentifier>
-    </Filter>
-    <None Include="..\..\Source\HoudiniOceanTest.Target.cs">
-      <Filter>Source</Filter>
-    </None>
-    <None Include="..\..\Source\HoudiniOceanTestEditor.Target.cs">
-      <Filter>Source</Filter>
-    </None>
-    <Filter Include="Config">
-      <UniqueIdentifier>{466412A3-87B5-4203-8ACF-0755FE161C9F}</UniqueIdentifier>
-    </Filter>
-    <None Include="..\..\Config\DefaultEditor.ini">
-      <Filter>Config</Filter>
-    </None>
-    <None Include="..\..\Config\DefaultEngine.ini">
-      <Filter>Config</Filter>
-    </None>
-    <None Include="..\..\Config\DefaultGame.ini">
-      <Filter>Config</Filter>
-    </None>
-    <Filter Include="Source\HoudiniOceanTest">
-      <UniqueIdentifier>{E6BF60E8-AB79-4BE7-80F8-11C3FF246D86}</UniqueIdentifier>
-    </Filter>
-    <None Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTest.Build.cs">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </None>
-    <ClCompile Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTest.cpp">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </ClCompile>
-    <ClInclude Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTest.h">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </ClInclude>
-    <ClCompile Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTestGameModeBase.cpp">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </ClCompile>
-    <ClInclude Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTestGameModeBase.h">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </ClInclude>
-    <ClCompile Include="..\..\Source\HoudiniOceanTest\OceanMeshComponent.cpp">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </ClCompile>
-    <ClInclude Include="..\..\Source\HoudiniOceanTest\OceanMeshComponent.h">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\Source\HoudiniOceanTest\OceanTextureComponent.h">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\Source\HoudiniOceanTest\OceanTextureComponent.cpp">
-      <Filter>Source\HoudiniOceanTest</Filter>
-    </ClCompile>
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\..\HoudiniOceanTest.uproject" />
+		<Filter Include="Source">
+			<UniqueIdentifier>{76AF22B9-ECF4-4FC8-B9BE-250BC44E2EE0}</UniqueIdentifier>
+		</Filter>
+		<None Include="..\..\Source\HoudiniOceanTest.Target.cs">
+			<Filter>Source</Filter>
+		</None >
+		<None Include="..\..\Source\HoudiniOceanTestEditor.Target.cs">
+			<Filter>Source</Filter>
+		</None >
+		<Filter Include="Config">
+			<UniqueIdentifier>{10453504-B560-4AF2-B69C-86CC9E1564B1}</UniqueIdentifier>
+		</Filter>
+		<None Include="..\..\Config\DefaultEditor.ini">
+			<Filter>Config</Filter>
+		</None >
+		<None Include="..\..\Config\DefaultEngine.ini">
+			<Filter>Config</Filter>
+		</None >
+		<None Include="..\..\Config\DefaultGame.ini">
+			<Filter>Config</Filter>
+		</None >
+		<Filter Include="Source\HoudiniOceanTest">
+			<UniqueIdentifier>{3F733A5C-C6BF-4884-BAF5-9289E2AFC91F}</UniqueIdentifier>
+		</Filter>
+		<None Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTest.Build.cs">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</None >
+		<ClCompile Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTest.cpp">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClCompile >
+		<ClInclude Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTest.h">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClInclude >
+		<ClCompile Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTestGameModeBase.cpp">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClCompile >
+		<ClInclude Include="..\..\Source\HoudiniOceanTest\HoudiniOceanTestGameModeBase.h">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClInclude >
+		<ClInclude Include="..\..\Source\HoudiniOceanTest\Ocean.h">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClInclude >
+		<ClCompile Include="..\..\Source\HoudiniOceanTest\OceanMeshComponent.cpp">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClCompile >
+		<ClInclude Include="..\..\Source\HoudiniOceanTest\OceanMeshComponent.h">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClInclude >
+		<ClCompile Include="..\..\Source\HoudiniOceanTest\OceanTextureComponent.cpp">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClCompile >
+		<ClInclude Include="..\..\Source\HoudiniOceanTest\OceanTextureComponent.h">
+			<Filter>Source\HoudiniOceanTest</Filter>
+		</ClInclude >
+	</ItemGroup>
 </Project>
