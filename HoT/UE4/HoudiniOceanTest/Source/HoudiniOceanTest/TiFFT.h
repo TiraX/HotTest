@@ -259,7 +259,7 @@ public:
 		for (int r = 0; r < M; r++)
 		{
 			// collect rows
-			memcpy(result.row_data(r), row.data(), M * sizeof(TiComplex));
+			memcpy(row.data(), result.row_data(r), M * sizeof(TiComplex));
 			// do ifft
 			iteration_ifft_dif(row);
 
