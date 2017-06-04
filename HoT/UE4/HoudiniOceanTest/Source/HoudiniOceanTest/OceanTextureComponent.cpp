@@ -26,8 +26,11 @@ UOceanTextureComponent::UOceanTextureComponent(const FObjectInitializer& ObjectI
 	, WindAlign(2)
 	, Depth(200.f)
 	, Choppyness(1.6f)
-	, WaveScale(1.f)
+	, HeightScale(1.f)
+	, ChopScale(1.f)
 	, OceanScale(0.1f)
+	, SpeedScale(1.f)
+	, NormalStrength(1.f)
 	, _Time(0.f)
 {
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
@@ -83,8 +86,8 @@ void UOceanTextureComponent::SetupOcean()
 
 	float stepsize = 1.0f;// GridSize / (float)gridres;
 	_Ocean = new drw::Ocean(gridres, gridres, stepsize, stepsize,
-		WindSpeed, ShortestWaveLength, WaveHeight, WindDirection,
-		Damp, WindAlign, Depth, 12306);
+		WindSpeed, ShortestWaveLength, WaveHeight, WindDirection / 180.0f * PI,
+		1.f - Damp, WindAlign, Depth, 0);
 	OceanScale = _Ocean->get_height_normalize_factor();
 
 	_OceanContext = _Ocean->new_context(true, bChop, true, bJacobian);
@@ -170,7 +173,8 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	if (!OceanHeightTexture || !OceanNormalTexture)
 		return;
 
-	_Time += DeltaTime;
+	_Time += DeltaTime * SpeedScale ;
+	UE_LOG(LogOceanTextureComponent, Log, TEXT("time: %f.\n"), _Time);
 
 	// sum up the waves at this timestep
 	long long t_start = timeGetTime();
@@ -188,6 +192,11 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		{
 			// height and chopness
 			FLinearColor lc;
+			//_OceanContext->eval_xz(x, y);
+			//lc.R = _OceanContext->disp[1] * 0.5f + 0.5f;
+			//lc.G = _OceanContext->disp[0] * 0.5f + 0.5f;
+			//lc.B = _OceanContext->disp[2] * 0.5f + 0.5f;
+
 			lc.R = _OceanContext->getHF(x, y) * 0.5f + 0.5f;
 			lc.G = _OceanContext->getChopX(x, y) * 0.5f + 0.5f;
 			lc.B = _OceanContext->getChopY(x, y) * 0.5f + 0.5f;
@@ -209,6 +218,7 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			vec.X = _OceanContext->getNormalX(x, y);
 			vec.Y = _OceanContext->getNormalZ(x, y);
 			vec.Z = _OceanContext->getNormalY(x, y);
+			vec *= FVector(NormalStrength, NormalStrength, 1.f);
 			vec.Normalize();
 			lc.R = vec.X * 0.5f + 0.5f;
 			lc.G = vec.Y * 0.5f + 0.5f;
@@ -227,7 +237,7 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		}
 	}
 	t_end = timeGetTime();
-	UE_LOG(LogOceanTextureComponent, Log, TEXT("hmax: %f; hmin: %f.\n"), hmax, hmin);
+	//UE_LOG(LogOceanTextureComponent, Log, TEXT("hmax: %f; hmin: %f.\n"), hmax, hmin);
 	UE_LOG(LogOceanTextureComponent, Log, TEXT("construct pixel time: %d.\n"), int(t_end - t_start));
 
 	UpdateTextureRegions(OceanHeightTexture, 0, size * 4, 4, HeightFieldPixels, true);

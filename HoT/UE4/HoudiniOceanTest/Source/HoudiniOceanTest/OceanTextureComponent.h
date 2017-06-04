@@ -60,9 +60,21 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float Choppyness;
 
-	/**	The amount of scale for all vertices. */
+	/**	The height amount of scale for all vertices. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		float WaveScale;
+		float HeightScale;
+
+	/**	The chopness amount of scale for all vertices. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ChopScale;
+
+	/**	The speed scale for waves moving. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float SpeedScale;
+
+	/**	The normal strenth along xy. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float NormalStrength;
 
 	/** Set the procedural texture to obtain ocean data. Size must be 2^x.*/
 	UFUNCTION(BlueprintCallable, Category = "Components|OceanTexture")
