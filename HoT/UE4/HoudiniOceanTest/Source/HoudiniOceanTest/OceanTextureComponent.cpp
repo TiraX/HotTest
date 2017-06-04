@@ -35,8 +35,6 @@ UOceanTextureComponent::UOceanTextureComponent(const FObjectInitializer& ObjectI
 	PrimaryComponentTick.bCanEverTick = true;
 	bAutoActivate = true;
 	bTickInEditor = true;
-
-	// ...
 }
 
 UOceanTextureComponent::~UOceanTextureComponent()
@@ -207,14 +205,19 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			HeightFieldPixels[(y * size + x) * 4 + 3] = c.A;
 
 			// normals
-			//lc.R = _OceanContext->getNormalX(x, y) * 0.5f + 0.5f;
-			//lc.G = _OceanContext->getNormalZ(x, y) * 0.5f + 0.5f;
-			//lc.B = _OceanContext->getNormalY(x, y) * 0.5f + 0.5f;
+			FVector vec;
+			vec.X = _OceanContext->getNormalX(x, y);
+			vec.Y = _OceanContext->getNormalZ(x, y);
+			vec.Z = _OceanContext->getNormalY(x, y);
+			vec.Normalize();
+			lc.R = vec.X * 0.5f + 0.5f;
+			lc.G = vec.Y * 0.5f + 0.5f;
+			lc.B = vec.Z * 0.5f + 0.5f;
 
-			_OceanContext->eval2_xz(x, y);
-			lc.R = _OceanContext->normal[0] * 0.5f + 0.5f;
-			lc.G = _OceanContext->normal[2] * 0.5f + 0.5f;
-			lc.B = _OceanContext->normal[1] * 0.5f + 0.5f;
+			//_OceanContext->eval2_xz(x, y);
+			//lc.R = _OceanContext->normal[0] * 0.5f + 0.5f;
+			//lc.G = _OceanContext->normal[2] * 0.5f + 0.5f;
+			//lc.B = _OceanContext->normal[1] * 0.5f + 0.5f;
 
 			c = lc.ToFColor(false);
 			NormalPixels[(y * size + x) * 4 + 0] = c.B;
