@@ -2,11 +2,14 @@
 
 #include "HoudiniOceanTest.h"
 #include "OceanTextureComponent.h"
-//#include "Ocean.h"
+#if WITH_SELF_FFT
 #include "OceanTix.h"
 
 std::vector<int> FFT2D::bf;
 std::map<int, TiComplex> FFT2D::twiddleFactor;
+#else
+#include "Ocean.h"
+#endif
 
 DECLARE_LOG_CATEGORY_EXTERN(LogOceanTextureComponent, Verbose, All);
 DEFINE_LOG_CATEGORY(LogOceanTextureComponent);
@@ -93,7 +96,7 @@ void UOceanTextureComponent::SetupOcean()
 		WindSpeed, ShortestWaveLength, WaveHeight, WindDirection / 180.0f * PI,
 		1.f - Damp, WindAlign, Depth, 0);
 
-	static bool _debug = !false;
+	static bool _debug = false;
 	if (_debug)
 	{
 		for (int i = 0; i < gridres; ++i)

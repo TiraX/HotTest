@@ -15,8 +15,11 @@
 #include "DynamicMeshBuilder.h"
 #include "EngineGlobals.h"
 #include "Engine/Engine.h"
-//#include "Ocean.h"
+#if WITH_SELF_FFT
 #include "OceanTix.h"
+#else
+#include "Ocean.h"
+#endif
 
 DECLARE_LOG_CATEGORY_EXTERN(LogOceanMeshComp, Verbose, All);
 

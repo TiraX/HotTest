@@ -4,3 +4,4 @@
 
 #include "Engine.h"
 
+#define WITH_SELF_FFT 0

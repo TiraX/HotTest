@@ -244,7 +244,7 @@ public:
 				col[r] = conj(input(c, M - r));
 			}
 			// do ifft
-			iteration_ifft_dif(col);
+			iteration_fft_dif(col);
 
 			// put into result colums and do reverse copy
 			for (r = 0; r < M; r++)
@@ -261,7 +261,7 @@ public:
 			// collect rows
 			memcpy(row.data(), result.row_data(r), M * sizeof(TiComplex));
 			// do ifft
-			iteration_ifft_dif(row);
+			iteration_fft_dif(row);
 
 			// put into result rows and do reverse copy
 			for (int c = 0; c < M; c++)
@@ -284,6 +284,33 @@ public:
 	}
 
 private:
+	void iteration_fft_dif(vec& src)
+	{
+		int l = src.size();
+		int p = log2(l);
+		int Bp = 1;
+		int Np = 1 << p;
+		for (int P = 0; P < p; ++P)
+		{
+			int Np1 = Np >> 1;
+			int BaseE = 0;
+			for (int b = 0; b < Bp; ++b)
+			{
+				int BaseO = BaseE + Np1;
+				for (int n = 0; n < Np1; ++n)
+				{
+					TiComplex T(cos(PI * 2.f * n / Np), sin(PI * 2.f * n / Np));
+					TiComplex e = src[BaseE + n] + src[BaseO + n];
+					TiComplex o = (src[BaseE + n] - src[BaseO + n]) * T;
+					src[BaseE + n] = e;
+					src[BaseO + n] = o;
+				}
+				BaseE += Np;
+			}
+			Bp <<= 1;
+			Np >>= 1;
+		}
+	}
 	void iteration_ifft_dif(vec& src)
 	{
 		int l = src.size();

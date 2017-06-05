@@ -56,6 +56,8 @@
 // OpenEXR includes a nice reentrant gaussian random number generator (http://www.openexr.com/)
 #include "ImathRandom.h"
 
+#define USE_FULL_SIZE 1
+
 namespace drw
 {
 	// our types ...
@@ -430,8 +432,13 @@ namespace drw
 		  : _M(m),_N(n),_Lx(Lx),_Lz(Lz),
 			_do_disp_y(hf),_do_normals(normals),_do_chop(chop),_do_jacobian(jacobian)
 	  {
+#if USE_FULL_SIZE
+		  _fft_in.resize(_M, _N );
+		  _htilda.resize(_M, _N );
+#else
 		_fft_in.resize(_M,1 + _N/2);
 		_htilda.resize(_M,1 + _N/2);
+#endif
 
    
 		if (hf)       alloc_disp_y();
@@ -469,7 +476,11 @@ namespace drw
 
 	  {
 		// size the arrays
+#if USE_FULL_SIZE
+		  _k.resize(M, N);
+#else
 		_k.resize(M,1 + N/2);
+#endif
 		_h0.resize(M,N);
 		_h0_minus.resize(M,N);
 		_kx.resize(_M);
@@ -531,7 +542,11 @@ namespace drw
 		// pre-calculate the k matrix
 		for (int i = 0 ; i  < _M ; ++i)
 		{
+#if USE_FULL_SIZE
+		  for (int j = 0; j < _N; ++j)
+#else
 		  for (int j  = 0 ; j  <= _N / 2 ; ++j) // note <= _N/2 here, see the fftw notes about complex->real fft storage
+#endif
 		  {
 			_k(i,j) = sqrt(_kx[i]*_kx[i] + _kz[j]*_kz[j] );
 		  }
@@ -588,7 +603,11 @@ namespace drw
 		{
 		  // note the <= _N/2 here, see the fftw doco about
 		  // the mechanics of the complex->real fft storage
+#if USE_FULL_SIZE
+		  for (int j = 0; j < _N; ++j)
+#else
 		  for (int j  = 0 ; j  <= _N / 2 ; ++j)
+#endif
 		  {
 			r._htilda(i,j) = _h0(i,j) * cexp(complex_f(0,omega(_k(i,j))*t))  +
 							 conj(_h0_minus(i,j)) * cexp(complex_f(0,-omega(_k(i,j))*t));
@@ -609,7 +628,11 @@ namespace drw
 		  // x displacement
 		  for (int i = 0 ; i  < _M ; ++i)
 		  {
+#if USE_FULL_SIZE
+			for (int j = 0; j < _N; ++j)
+#else
 			for (int j  = 0 ; j  <= _N / 2 ; ++j)
+#endif
 			{
 			  r._fft_in(i,j) = -scale * chop_amount * minus_i *
 							   r._htilda(i,j) * (_k(i,j) == 0.0 ? complex_f(0,0) : _kx[i] / _k(i,j)) ;
@@ -621,7 +644,11 @@ namespace drw
 		  // z displacement
 		  for (int i = 0 ; i  < _M ; ++i)
 		  {
-			for (int j  = 0 ; j  <= _N / 2 ; ++j)
+#if USE_FULL_SIZE
+			for (int j = 0; j < _N; ++j)
+#else
+			for (int j = 0; j <= _N / 2; ++j)
+#endif
 			{
 			  r._fft_in(i,j) = -scale * chop_amount * minus_i *
 							   r._htilda(i,j) * (_k(i,j) == 0.0 ? complex_f(0,0) : _kz[j] / _k(i,j)) ;
@@ -637,7 +664,11 @@ namespace drw
 		{
 		  for (int i = 0 ; i  < _M ; ++i)
 		  {
-			for (int j  = 0 ; j  <= _N / 2 ; ++j)
+#if USE_FULL_SIZE
+			for (int j = 0; j < _N; ++j)
+#else
+			for (int j = 0; j <= _N / 2; ++j)
+#endif
 			{
 			  r._fft_in(i,j) = c0 - plus_i * r._htilda(i,j) * _kx[i]  ;
 			}
@@ -647,7 +678,11 @@ namespace drw
 
 		  for (int i = 0 ; i  < _M ; ++i)
 		  {
-			for (int j  = 0 ; j  <= _N / 2 ; ++j)
+#if USE_FULL_SIZE
+			for (int j = 0; j < _N; ++j)
+#else
+			for (int j = 0; j <= _N / 2; ++j)
+#endif
 			{
 			  r._fft_in(i,j) = c0 - plus_i * r._htilda(i,j) * _kz[j] ;
 			}
@@ -658,7 +693,7 @@ namespace drw
 		  float ny = 1.f / scale;
 		  for (int i = 0; i < _M; ++i)
 		  {
-			  for (int j = 0; j <= _N ; ++j)
+			  for (int j = 0; j < _N ; ++j)
 			  {
 				  r._N_y(i, j) = ny;
 			  }
@@ -674,7 +709,11 @@ namespace drw
 		  // Jxx
 		  for (int i = 0 ; i  < _M ; ++i)
 		  {
-			for (int j  = 0 ; j  <= _N / 2 ; ++j)
+#if USE_FULL_SIZE
+			for (int j = 0; j < _N; ++j)
+#else
+			for (int j = 0; j <= _N / 2; ++j)
+#endif
 			{
 			  r._fft_in(i,j) = -scale * chop_amount * r._htilda(i,j) *
 							   (_k(i,j) == 0.0 ? complex_f(0,0) : _kx[i]*_kx[i] / _k(i,j));
@@ -687,7 +726,11 @@ namespace drw
 		  // Jzz
 		  for (int i = 0 ; i  < _M ; ++i)
 		  {
-			for (int j  = 0 ; j  <= _N / 2 ; ++j)
+#if USE_FULL_SIZE
+			for (int j = 0; j < _N; ++j)
+#else
+			for (int j = 0; j <= _N / 2; ++j)
+#endif
 			{
 			  r._fft_in(i,j) = -scale * chop_amount * r._htilda(i,j) *
 							   (_k(i,j) == 0.0 ? complex_f(0,0) : _kz[j]*_kz[j] / _k(i,j));
@@ -700,7 +743,11 @@ namespace drw
 		  // Jxz
 		  for (int i = 0 ; i  < _M ; ++i)
 		  {
-			for (int j  = 0 ; j  <= _N / 2 ; ++j)
+#if USE_FULL_SIZE
+			for (int j = 0; j < _N; ++j)
+#else
+			for (int j = 0; j <= _N / 2; ++j)
+#endif
 			{
 			  r._fft_in(i,j) = -scale *chop_amount * r._htilda(i,j) *
 							   (_k(i,j) == 0.0 ? complex_f(0,0) : _kx[i]*_kz[j] / _k(i,j));
