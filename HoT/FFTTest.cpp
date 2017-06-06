@@ -6,9 +6,11 @@
 #include "ImageTga.h"
 
 #include <vector>
+#include <map>
 #include <windows.h>
 
 using namespace std;
+
 
 const float PI = 3.14159265f;
 const float PI2 = PI * 2.f;
@@ -138,7 +140,8 @@ vec recursive_fft(const vec& a)
 	return y;
 }
 
-vector<int> bf;
+vector<int> bf_r2, bf_r4;
+map<float, TiComplex> exp_map;
 
 int rev_bit(int k, int n)
 {
@@ -150,10 +153,89 @@ int rev_bit(int k, int n)
 	return k0;
 }
 
+
+#define MAXPOW 24
+
+int pow_2[MAXPOW];
+int pow_4[MAXPOW];
+
+void b4_reorder_map(std::vector<int>& m)
+{
+	int N = m.size();
+	int bits, i, j, k;
+
+	for (i = 0; i<MAXPOW; i++)
+		if (pow_2[i] == N)
+		{
+			bits = i;
+			break;
+		}
+
+	for (i = 0; i<N; i++)
+	{
+		j = 0;
+		for (k = 0; k<bits; k += 2)
+		{
+			if (i&pow_2[k]) j += pow_2[bits - k - 2];
+			if (i&pow_2[k + 1]) j += pow_2[bits - k - 1];
+		}
+
+		if (j>i)  /** Only make "up" swaps */
+		{
+			m[i] = j;
+			m[j] = i;
+		}
+	}
+}
+void bitReverseCopyR4(const vec& src, vec &dest)
+{
+	int n = src.size();
+	for (int k = 0; k < n; ++k)
+	{
+		if (bf_r4[k] == 0)
+		{
+			dest[k] = src[k];
+		}
+		else
+		{
+			dest[bf_r4[k]] = src[k];
+		}
+	}
+}
+
+void bit_r4_reorder(vec& W)
+{
+	int N = W.size();
+	int bits, i, j, k;
+	float tempr, tempi;
+
+	for (i = 0; i<MAXPOW; i++)
+		if (pow_2[i] == N) bits = i;
+
+	for (i = 0; i<N; i++)
+	{
+		j = 0;
+		for (k = 0; k<bits; k += 2)
+		{
+			if (i&pow_2[k]) j += pow_2[bits - k - 2];
+			if (i&pow_2[k + 1]) j += pow_2[bits - k - 1];
+		}
+
+		if (j>i)  /** Only make "up" swaps */
+		{
+			tempr = W[i].A;
+			tempi = W[i].B;
+			W[i].A = W[j].A;
+			W[i].B = W[j].B;
+			W[j].A = tempr;
+			W[j].B = tempi;
+		}
+	}
+}
 void bitReverseCopy(const vec& src, vec &dest)
 {
 	int n = src.size();
-	for (int k = 0; k <= n - 1; ++k) dest[bf[k]] = src[k];
+	for (int k = 0; k <= n - 1; ++k) dest[bf_r2[k]] = src[k];
 }
 void iteration_fft_dit(const vec& a1, vec& a)
 {
@@ -265,6 +347,113 @@ void iteration_fft_dif(vec& a1, vec& a)
 	bitReverseCopy(a1, a);
 }
 
+
+void iteration_fft_dif_r4(vec& a1, vec& a)
+{
+	int l = a1.size();
+	int p = log2(l) / 2;
+	int Bp = 1;
+	int Np = 4 << p;
+	for (int P = 0; P < p; ++P)
+	{
+		int Np2 = Np >> 2;
+		int Base0 = 0;
+
+		for (int b = 0; b < Bp; ++b)
+		{
+			int Base1 = Base0 + Np2;
+			int Base2 = Base1 + Np2;
+			int Base3 = Base2 + Np2;
+			for (int n = 0; n < Np2; ++n)
+			{
+				TiComplex a, b, c, d;
+				int i0, i1, i2, i3;
+				i0 = Base0 + n;
+				i1 = Base1 + n;
+				i2 = Base2 + n;
+				i3 = Base3 + n;
+
+				a = a1[Base0 + n] + a1[Base1 + n] + a1[Base2 + n] + a1[Base3 + n];
+				b.A = a1[Base0 + n].A + a1[Base1 + n].B - a1[Base2 + n].A - a1[Base3 + n].B;
+				b.B = a1[Base0 + n].B - a1[Base1 + n].A - a1[Base2 + n].B + a1[Base3 + n].A;
+				c = a1[Base0 + n] - a1[Base1 + n] + a1[Base2 + n] - a1[Base3 + n];
+				d.A = a1[Base0 + n].A - a1[Base1 + n].B - a1[Base2 + n].A + a1[Base3 + n].B;
+				d.B = a1[Base0 + n].B + a1[Base1 + n].A - a1[Base2 + n].B - a1[Base3 + n].A;
+
+				TiComplex w0(1), w1, w2, w3;
+
+				float t = float(n) / Np;
+				w1 = //exp_map[t * 1];
+					TiComplex(cos(PI2 * n * 1 / Np), -sin(PI2 * n * 1 / Np));
+				w2 = //exp_map[t * 2];
+					TiComplex(cos(PI2 * n * 2 / Np), -sin(PI2 * n * 2 / Np));
+				w3 = //exp_map[t * 3];
+					TiComplex(cos(PI2 * n * 3 / Np), -sin(PI2 * n * 3 / Np));
+
+				a1[Base0 + n] = a * w0;
+				a1[Base1 + n] = b * w1;
+				a1[Base2 + n] = c * w2;
+				a1[Base3 + n] = d * w3;
+			}
+			Base0 += Np;
+		}
+		Bp <<= 2;
+		Np >>= 2;
+	}
+	//a.resize(l);
+	//bitReverseCopy(a1, a);
+}
+
+void twiddle(TiComplex& W, int N, float stuff)
+{
+	W.A = cos(stuff*2.0*PI / (float)N);
+	W.B = -sin(stuff*2.0*PI / (float)N);
+}
+
+/** RADIX-4 FFT ALGORITHM */
+void radix4(vec& a1, int N, int start)
+{
+	TiComplex* x = a1.data() + start;
+	int    n2, k1, N1, N2;
+	TiComplex W, bfly[4];
+
+	N1 = 4;
+	N2 = N / 4;
+
+	/** Do 4 Point DFT */
+	for (n2 = 0; n2<N2; n2++)
+	{
+		/** Don't hurt the butterfly */
+		bfly[0].A = (x[n2].A + x[N2 + n2].A + x[2 * N2 + n2].A + x[3 * N2 + n2].A);
+		bfly[0].B = (x[n2].B + x[N2 + n2].B + x[2 * N2 + n2].B + x[3 * N2 + n2].B);
+
+		bfly[1].A = (x[n2].A + x[N2 + n2].B - x[2 * N2 + n2].A - x[3 * N2 + n2].B);
+		bfly[1].B = (x[n2].B - x[N2 + n2].A - x[2 * N2 + n2].B + x[3 * N2 + n2].A);
+
+		bfly[2].A = (x[n2].A - x[N2 + n2].A + x[2 * N2 + n2].A - x[3 * N2 + n2].A);
+		bfly[2].B = (x[n2].B - x[N2 + n2].B + x[2 * N2 + n2].B - x[3 * N2 + n2].B);
+
+		bfly[3].A = (x[n2].A - x[N2 + n2].B - x[2 * N2 + n2].A + x[3 * N2 + n2].B);
+		bfly[3].B = (x[n2].B + x[N2 + n2].A - x[2 * N2 + n2].B - x[3 * N2 + n2].A);
+
+
+		/** In-place results */
+		for (k1 = 0; k1<N1; k1++)
+		{
+			twiddle(W, N, (double)k1*(double)n2);
+			x[n2 + N2*k1].A = bfly[k1].A*W.A - bfly[k1].B*W.B;
+			x[n2 + N2*k1].B = bfly[k1].B*W.A + bfly[k1].A*W.B;
+		}
+	}
+
+	/** Don't recurse if we're down to one butterfly */
+	if (N2 != 1)
+		for (k1 = 0; k1<N1; k1++)
+		{
+			radix4(a1, N2, N2*k1);
+		}
+}
+
 void iteration_ifft_dif(vec& a1, vec& a)
 {
 	int l = a1.size();
@@ -340,6 +529,30 @@ void time_test(const vec& a)
 	printf("fft1 time is %lld.\n", t_end - t_start);
 }
 
+void time_test_r2_r4(const vec& a)
+{
+	vec a1 = a;
+	const int times = 1000;
+	long long t_start, t_end;
+	vec y;
+	y.resize(a1.size());
+	t_start = timeGetTime();
+	for (int i = 0; i < times; ++i)
+	{
+		iteration_fft_dif(a1, y);
+	}
+	t_end = timeGetTime();
+	printf("r2 time is %lld.\n", t_end - t_start);
+	t_start = timeGetTime();
+	for (int i = 0; i < times; ++i)
+	{
+		iteration_fft_dif_r4(a1, y);
+		bitReverseCopyR4(a1, y);
+	}
+	t_end = timeGetTime();
+	printf("r4 time is %lld.\n", t_end - t_start);
+}
+
 void test_image()
 {
 	int size = 4;
@@ -352,10 +565,10 @@ void test_image()
 	saveToImage("test_o.tga", img);
 
 	// prepare butterfly help array
-	bf.clear();
+	bf_r2.clear();
 	for (int k = 0; k < size; ++k)
 	{
-		bf.push_back(rev_bit(k, size));
+		bf_r2.push_back(rev_bit(k, size));
 	}
 
 	long long t_start = timeGetTime();
@@ -483,7 +696,14 @@ void test_image()
 
 void test_fft()
 {
-	int size = 8;
+	pow_2[0] = 1;
+	for (int i = 1; i<MAXPOW; i++)
+		pow_2[i] = pow_2[i - 1] * 2;
+	pow_4[0] = 1;
+	for (int i = 1; i<MAXPOW; i++)
+		pow_4[i] = pow_4[i - 1] * 4;
+
+	int size = 256;
 	// prepare src array
 	vec a, b;
 	a.clear();
@@ -499,11 +719,22 @@ void test_fft()
 		TiComplex c(i + 1);
 		b.push_back(c);
 	}
-	// prepare butterfly help array
-	bf.clear();
+
+	// prepare butterfly reorder array
+	bf_r2.clear();
 	for (int k = 0; k < size; ++k)
 	{
-		bf.push_back(rev_bit(k, size));
+		bf_r2.push_back(rev_bit(k, size));
+	}
+	bf_r4.resize(size);
+	b4_reorder_map(bf_r4);
+
+	// exp map
+	exp_map.clear();
+	float sizef = float(size);
+	for (int i = 0; i < size; i++)
+	{
+		exp_map[i / sizef] = TiComplex(cos(PI2 * i / size), -sin(PI2 * i / size));
 	}
 
 	vec y_dft = dft(a);
@@ -519,6 +750,17 @@ void test_fft()
 	print_vec("fft recursive", y_fft0);
 	print_vec("fft dit", y_fft1);
 	print_vec("fft dif", y_fft2 );
+
+	a1 = a;
+	vec y_fft_r4;
+	iteration_fft_dif_r4(a1, y_fft_r4);
+	//radix4(a1, a1.size(), 0);
+	print_vec("fft r4", a1);
+	//bit_r4_reorder(a1);
+	y_fft_r4.resize(a1.size());
+	bitReverseCopyR4(a1, y_fft_r4);
+	print_vec("radix 4", y_fft_r4);
+	time_test_r2_r4(a);
 
 	vec ao, ao1;
 	iteration_ifft_dit(y_fft1, ao);
@@ -564,10 +806,10 @@ void test_fft()
 void ifft_image(const TiImage& src, TiImage& dest)
 {
 	// prepare butterfly help array
-	bf.clear();
+	bf_r2.clear();
 	for (int k = 0; k < src.w; ++k)
 	{
-		bf.push_back(rev_bit(k, src.w));
+		bf_r2.push_back(rev_bit(k, src.w));
 	}
 	// ifft
 	vec* ifft_lines = new vec[src.h];
