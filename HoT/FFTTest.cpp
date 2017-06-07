@@ -353,7 +353,7 @@ void iteration_fft_dif_r4(vec& a1, vec& a)
 	int l = a1.size();
 	int p = log2(l) / 2;
 	int Bp = 1;
-	int Np = 4 << p;
+	int Np = l;
 	for (int P = 0; P < p; ++P)
 	{
 		int Np2 = Np >> 2;
