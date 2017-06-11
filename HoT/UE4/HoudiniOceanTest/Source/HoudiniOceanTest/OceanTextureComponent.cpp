@@ -2,6 +2,8 @@
 
 #include "HoudiniOceanTest.h"
 #include "OceanTextureComponent.h"
+#include "AssetRegistryModule.h"
+#include "ImageUtils.h"
 #if WITH_SELF_FFT
 #include "OceanTix.h"
 
@@ -233,6 +235,9 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	_Ocean->update(_Time, *_OceanContext, true, bChop, true, bJacobian, OceanScale, Choppyness);
 	long long t_end = timeGetTime();
 	UE_LOG(LogOceanTextureComponent, Log, TEXT("ocean update time: %d."), int(t_end - t_start));
+	
+	TArray<FColor> ColorToSave;
+	ColorToSave.SetNum(OceanHeightTexture->GetSizeX() * OceanHeightTexture->GetSizeY(), false);
 
 	t_start = timeGetTime();
 	int size = OceanHeightTexture->GetSizeX();
@@ -260,6 +265,7 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			if (lc.R < hmin)
 				hmin = lc.R;
 
+			ColorToSave[y * size + x] = c;
 			HeightFieldPixels[(y * size + x) * 4 + 0] = c.B;
 			HeightFieldPixels[(y * size + x) * 4 + 1] = c.G;
 			HeightFieldPixels[(y * size + x) * 4 + 2] = c.R;
@@ -291,6 +297,48 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	t_end = timeGetTime();
 	//UE_LOG(LogOceanTextureComponent, Log, TEXT("hmax: %f; hmin: %f."), hmax, hmin);
 	UE_LOG(LogOceanTextureComponent, Log, TEXT("construct pixel time: %d."), int(t_end - t_start));
+
+
+	static bool tryToSaveTexture = false;
+	if (!tryToSaveTexture && _Time > 10.f)
+	{
+		FString PackageName = TEXT("/Game/Folder/MyAsset");
+		UPackage* Package = CreatePackage(NULL, *PackageName);
+
+		//UPackage* tmpPkg = Cast<UPackage>(OceanHeightTexture->GetOuter());
+
+		//UPackage::SavePackage(tmpPkg, OceanHeightTexture, OceanHeightTexture->GetFlags(), TEXT("/Content/MyAsset"));
+		FCreateTexture2DParameters texParams;
+		texParams.bDeferCompression = true;
+		texParams.bSRGB = false;
+		texParams.bUseAlpha = true;
+		texParams.CompressionSettings = TC_VectorDisplacementmap;
+
+		UPackage* Outer = CreatePackage(NULL, *PackageName);
+		Outer->FullyLoad();
+		Outer->Modify();
+
+		UTexture2D* Texture = FImageUtils::CreateTexture2D(256, 256, ColorToSave, Outer, TEXT("MyAssetName"), OceanHeightTexture->GetFlags(), texParams);
+		Texture->MarkPackageDirty();
+
+		UPackage* tmpPkg = Cast<UPackage>(Texture->GetOuter());
+
+		if (tmpPkg)
+		{
+
+			//	save package, now I can see "back.uasset" color is changed.
+			//	BUT!!! it's not work. if I restart UE editor, the change is not save, why?
+			ESavePackageResult Result = UPackage::Save(tmpPkg, Texture, Texture->GetFlags(), *PackageName);
+			UE_LOG(LogOceanTextureComponent, Log, TEXT("save result: %d."), int(Result));
+			Texture->MarkPackageDirty();
+		}
+
+
+		//FAssetRegistryModule::AssetCreated(OceanHeightTexture);
+
+		tryToSaveTexture = true;
+	}
+
 
 	UpdateTextureRegions(OceanHeightTexture, 0, size * 4, 4, HeightFieldPixels, true);
 	UpdateTextureRegions(OceanNormalTexture, 0, size * 4, 4, NormalPixels, true);
