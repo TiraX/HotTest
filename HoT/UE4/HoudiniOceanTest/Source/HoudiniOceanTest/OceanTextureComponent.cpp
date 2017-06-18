@@ -312,13 +312,13 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 		texParams.bDeferCompression = true;
 		texParams.bSRGB = false;
 		texParams.bUseAlpha = true;
-		texParams.CompressionSettings = TC_VectorDisplacementmap;
+		texParams.CompressionSettings = TC_Default;
 
 		UPackage* Outer = CreatePackage(NULL, *PackageName);
 		Outer->FullyLoad();
 		Outer->Modify();
 
-		UTexture2D* Texture = FImageUtils::CreateTexture2D(256, 256, ColorToSave, Outer, TEXT("MyAssetName"), OceanHeightTexture->GetFlags(), texParams);
+		UTexture2D* Texture = FImageUtils::CreateTexture2D(256, 256, ColorToSave, Outer, TEXT("MyAssetName1"), OceanHeightTexture->GetFlags(), texParams);
 		Texture->MarkPackageDirty();
 
 		UPackage* tmpPkg = Cast<UPackage>(Texture->GetOuter());
