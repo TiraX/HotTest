@@ -79,6 +79,10 @@ public:
 	/** Set the procedural texture to obtain ocean data. Size must be 2^x.*/
 	UFUNCTION(BlueprintCallable, Category = "Components|OceanTexture")
 	void SetTexture(UTexture2D* HeightTexture, UTexture2D* NormalTexture);
+
+	/** Set the procedural texture to obtain ocean data. Size must be 2^x.*/
+	UFUNCTION(BlueprintCallable, Category = "Components|OceanTexture")
+	void UpdateFFTTexture(float DeltaTime);
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;

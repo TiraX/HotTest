@@ -223,11 +223,40 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// ...
+	UpdateFFTTexture(DeltaTime);
+}
+
+inline FVector2D GetCoord(int x, int y, int offsetX, int offsetY, int size)
+{
+	FVector2D c;
+	c.X = x + offsetX;
+	c.Y = y + offsetY;
+	if (c.X < 0) c.X = size - 1;
+	if (c.X >= size) c.X = 0;
+	if (c.Y < 0) c.Y = size - 1;
+	if (c.Y >= size) c.Y = 0;
+	return c;
+}
+
+FVector  DoNormal(drw::OceanContext* oc, int x, int y, int size)
+{
+	FVector n, v1, v2;
+	FVector2D c1, c2;
+	c1 = GetCoord(x, y, 1, 0, size);
+	c2 = GetCoord(x, y, 0, 1, size);
+
+	v1.Z = oc->getHF(c1.X, c1.Y) - oc->getHF(c2.X, c2.Y);
+
+
+	return n;
+}
+
+void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
+{
 	if (!OceanHeightTexture || !OceanNormalTexture)
 		return;
 
-	_Time += DeltaTime * SpeedScale ;
+	_Time += DeltaTime * SpeedScale;
 	UE_LOG(LogOceanTextureComponent, Log, TEXT("time: %f."), _Time);
 
 	// sum up the waves at this timestep
@@ -235,7 +264,7 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	_Ocean->update(_Time, *_OceanContext, true, bChop, true, bJacobian, OceanScale, Choppyness);
 	long long t_end = timeGetTime();
 	UE_LOG(LogOceanTextureComponent, Log, TEXT("ocean update time: %d."), int(t_end - t_start));
-	
+
 	TArray<FColor> ColorToSave;
 	ColorToSave.SetNum(OceanHeightTexture->GetSizeX() * OceanHeightTexture->GetSizeY(), false);
 
@@ -272,11 +301,11 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 			HeightFieldPixels[(y * size + x) * 4 + 3] = c.A;
 
 			// normals
-			FVector vec;
-			vec.X = _OceanContext->getNormalX(x, y);
-			vec.Y = _OceanContext->getNormalZ(x, y);
-			vec.Z = _OceanContext->getNormalY(x, y);
-			vec *= FVector(NormalStrength, NormalStrength, 1.f);
+			FVector vec = DoNormal(_OceanContext, x, y);
+			//vec.X = _OceanContext->getNormalX(x, y);
+			//vec.Y = _OceanContext->getNormalZ(x, y);
+			//vec.Z = _OceanContext->getNormalY(x, y);
+			//vec *= FVector(NormalStrength, NormalStrength, 1.f);
 			vec.Normalize();
 			lc.R = vec.X * 0.5f + 0.5f;
 			lc.G = vec.Y * 0.5f + 0.5f;
@@ -343,4 +372,3 @@ void UOceanTextureComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	UpdateTextureRegions(OceanHeightTexture, 0, size * 4, 4, HeightFieldPixels, true);
 	UpdateTextureRegions(OceanNormalTexture, 0, size * 4, 4, NormalPixels, true);
 }
-
