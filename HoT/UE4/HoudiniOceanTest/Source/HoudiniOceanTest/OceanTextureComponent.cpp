@@ -238,16 +238,38 @@ inline FVector2D GetCoord(int x, int y, int offsetX, int offsetY, int size)
 	return c;
 }
 
-FVector  DoNormal(drw::OceanContext* oc, int x, int y, int size)
+FVector  DoNormal(drw::OceanContext* oc, int x, int y, int size, float strength)
 {
-	FVector n, v1, v2;
-	FVector2D c1, c2;
+	FVector v1, v2;
+	FVector2D c1, c2, c3, c4;
 	c1 = GetCoord(x, y, 1, 0, size);
 	c2 = GetCoord(x, y, 0, 1, size);
+	c3 = GetCoord(x, y, -1, 0, size);
+	c4 = GetCoord(x, y, 0, -1, size);
 
-	v1.Z = oc->getHF(c1.X, c1.Y) - oc->getHF(c2.X, c2.Y);
+	v1.Z = oc->getHF(c1.X, c1.Y) - oc->getHF(x, y);
+	v2.Z = oc->getHF(c2.X, c2.Y) - oc->getHF(x, y);
+	v1.X = oc->getChopX(c1.X, c1.Y) - oc->getChopX(x, y) - 1.f * strength;
+	v1.Y = oc->getChopY(c1.X, c1.Y) - oc->getChopY(x, y);
+	v2.X = oc->getChopX(c2.X, c2.Y) - oc->getChopX(x, y);
+	v2.Y = oc->getChopY(c2.X, c2.Y) - oc->getChopY(x, y) - 1.f * strength;
 
+	FVector n1, n2;
+	n1 = v1 ^ v2;
+	n1.Normalize();
 
+	v1.Z = oc->getHF(c3.X, c3.Y) - oc->getHF(x, y);
+	v2.Z = oc->getHF(c4.X, c4.Y) - oc->getHF(x, y);
+	v1.X = oc->getChopX(c3.X, c3.Y) - oc->getChopX(x, y) + 1.f * strength;
+	v1.Y = oc->getChopY(c3.X, c3.Y) - oc->getChopY(x, y);
+	v2.X = oc->getChopX(c4.X, c4.Y) - oc->getChopX(x, y);
+	v2.Y = oc->getChopY(c4.X, c4.Y) - oc->getChopY(x, y) + 1.f * strength;
+
+	n2 = v1 ^ v2;
+	n2.Normalize();
+
+	FVector n = n1 + n2;
+	n.Normalize();
 	return n;
 }
 
@@ -301,12 +323,12 @@ void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 			HeightFieldPixels[(y * size + x) * 4 + 3] = c.A;
 
 			// normals
-			FVector vec = DoNormal(_OceanContext, x, y);
+			FVector vec = DoNormal(_OceanContext, x, y, size, NormalStrength);
 			//vec.X = _OceanContext->getNormalX(x, y);
 			//vec.Y = _OceanContext->getNormalZ(x, y);
 			//vec.Z = _OceanContext->getNormalY(x, y);
 			//vec *= FVector(NormalStrength, NormalStrength, 1.f);
-			vec.Normalize();
+			//vec.Normalize();
 			lc.R = vec.X * 0.5f + 0.5f;
 			lc.G = vec.Y * 0.5f + 0.5f;
 			lc.B = vec.Z * 0.5f + 0.5f;
