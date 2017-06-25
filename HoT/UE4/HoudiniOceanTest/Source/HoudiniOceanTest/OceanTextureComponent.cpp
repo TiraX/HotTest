@@ -278,8 +278,8 @@ void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 	if (!OceanHeightTexture || !OceanNormalTexture)
 		return;
 
-	//_Time += DeltaTime * SpeedScale;
-	_Time = 0.f;
+	_Time += DeltaTime * SpeedScale;
+	//_Time = 0.f;
 	//UE_LOG(LogOceanTextureComponent, Log, TEXT("time: %f."), _Time);
 
 	// sum up the waves at this timestep
@@ -324,12 +324,12 @@ void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 			HeightFieldPixels[(y * size + x) * 4 + 3] = c.A;
 
 			// normals
-			FVector vec = DoNormal(_OceanContext, x, y, size, NormalStrength);
-			//FVector vec;
-			//vec.X = _OceanContext->getNormalX(x, y);
-			//vec.Y = _OceanContext->getNormalZ(x, y);
-			//vec.Z = _OceanContext->getNormalY(x, y);
-			//vec *= FVector(NormalStrength, NormalStrength, 1.f);
+			//FVector vec = DoNormal(_OceanContext, x, y, size, NormalStrength);
+			FVector vec;
+			vec.X = _OceanContext->getNormalX(x, y);
+			vec.Y = _OceanContext->getNormalZ(x, y);
+			vec.Z = _OceanContext->getNormalY(x, y);
+			vec *= FVector(NormalStrength, NormalStrength, 1.f);
 			vec.Normalize();
 			lc.R = vec.X * 0.5f + 0.5f;
 			lc.G = vec.Y * 0.5f + 0.5f;
