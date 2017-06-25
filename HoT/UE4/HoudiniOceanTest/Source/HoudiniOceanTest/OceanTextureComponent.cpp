@@ -249,10 +249,10 @@ FVector  DoNormal(drw::OceanContext* oc, int x, int y, int size, float strength)
 
 	v1.Z = oc->getHF(c1.X, c1.Y) - oc->getHF(x, y);
 	v2.Z = oc->getHF(c2.X, c2.Y) - oc->getHF(x, y);
-	v1.X = oc->getChopX(c1.X, c1.Y) - oc->getChopX(x, y) - 1.f * strength;
+	v1.X = oc->getChopX(c1.X, c1.Y) - oc->getChopX(x, y) + 1.f * strength;
 	v1.Y = oc->getChopY(c1.X, c1.Y) - oc->getChopY(x, y);
 	v2.X = oc->getChopX(c2.X, c2.Y) - oc->getChopX(x, y);
-	v2.Y = oc->getChopY(c2.X, c2.Y) - oc->getChopY(x, y) - 1.f * strength;
+	v2.Y = oc->getChopY(c2.X, c2.Y) - oc->getChopY(x, y) + 1.f * strength;
 
 	FVector n1, n2;
 	n1 = v1 ^ v2;
@@ -260,10 +260,10 @@ FVector  DoNormal(drw::OceanContext* oc, int x, int y, int size, float strength)
 
 	v1.Z = oc->getHF(c3.X, c3.Y) - oc->getHF(x, y);
 	v2.Z = oc->getHF(c4.X, c4.Y) - oc->getHF(x, y);
-	v1.X = oc->getChopX(c3.X, c3.Y) - oc->getChopX(x, y) + 1.f * strength;
+	v1.X = oc->getChopX(c3.X, c3.Y) - oc->getChopX(x, y) - 1.f * strength;
 	v1.Y = oc->getChopY(c3.X, c3.Y) - oc->getChopY(x, y);
 	v2.X = oc->getChopX(c4.X, c4.Y) - oc->getChopX(x, y);
-	v2.Y = oc->getChopY(c4.X, c4.Y) - oc->getChopY(x, y) + 1.f * strength;
+	v2.Y = oc->getChopY(c4.X, c4.Y) - oc->getChopY(x, y) - 1.f * strength;
 
 	n2 = v1 ^ v2;
 	n2.Normalize();
@@ -278,14 +278,15 @@ void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 	if (!OceanHeightTexture || !OceanNormalTexture)
 		return;
 
-	_Time += DeltaTime * SpeedScale;
-	UE_LOG(LogOceanTextureComponent, Log, TEXT("time: %f."), _Time);
+	//_Time += DeltaTime * SpeedScale;
+	_Time = 0.f;
+	//UE_LOG(LogOceanTextureComponent, Log, TEXT("time: %f."), _Time);
 
 	// sum up the waves at this timestep
 	long long t_start = timeGetTime();
 	_Ocean->update(_Time, *_OceanContext, true, bChop, true, bJacobian, OceanScale, Choppyness);
 	long long t_end = timeGetTime();
-	UE_LOG(LogOceanTextureComponent, Log, TEXT("ocean update time: %d."), int(t_end - t_start));
+	//UE_LOG(LogOceanTextureComponent, Log, TEXT("ocean update time: %d."), int(t_end - t_start));
 
 	TArray<FColor> ColorToSave;
 	ColorToSave.SetNum(OceanHeightTexture->GetSizeX() * OceanHeightTexture->GetSizeY(), false);
@@ -324,11 +325,12 @@ void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 
 			// normals
 			FVector vec = DoNormal(_OceanContext, x, y, size, NormalStrength);
+			//FVector vec;
 			//vec.X = _OceanContext->getNormalX(x, y);
 			//vec.Y = _OceanContext->getNormalZ(x, y);
 			//vec.Z = _OceanContext->getNormalY(x, y);
 			//vec *= FVector(NormalStrength, NormalStrength, 1.f);
-			//vec.Normalize();
+			vec.Normalize();
 			lc.R = vec.X * 0.5f + 0.5f;
 			lc.G = vec.Y * 0.5f + 0.5f;
 			lc.B = vec.Z * 0.5f + 0.5f;
