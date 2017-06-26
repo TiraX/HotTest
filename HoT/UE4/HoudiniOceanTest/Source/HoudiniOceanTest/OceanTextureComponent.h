@@ -78,7 +78,7 @@ public:
 
 	/** Set the procedural texture to obtain ocean data. Size must be 2^x.*/
 	UFUNCTION(BlueprintCallable, Category = "Components|OceanTexture")
-	void SetTexture(UTexture2D* HeightTexture, UTexture2D* NormalTexture);
+	void SetTexture(UTexture2D* HeightTexture, UTexture2D* NormalTexture, UTexture2D* JacobTexture);
 
 	/** Set the procedural texture to obtain ocean data. Size must be 2^x.*/
 	UFUNCTION(BlueprintCallable, Category = "Components|OceanTexture")
@@ -94,6 +94,7 @@ public:
 private:
 	UTexture2D* OceanHeightTexture;
 	UTexture2D* OceanNormalTexture;
+	UTexture2D* OceanJacTexture;
 
 	void SetupOcean();
 
@@ -104,5 +105,6 @@ private:
 
 	uint8* HeightFieldPixels;
 	uint8* NormalPixels;
+	uint8* JacobPixels;
 	float _Time;
 };

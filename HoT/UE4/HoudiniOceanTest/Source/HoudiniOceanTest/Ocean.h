@@ -448,6 +448,14 @@ class OceanContext : public UsingThreadedFFTW
 	  return _N_z(x, y);
   }
 
+  void getJacob(int x, int y, float* out)
+  {
+	  compute_eigenstuff(_Jxx(x, y), _Jzz(x, y), _Jxz(x, y));
+	  out[0] = Eminus[0];
+	  out[1] = Eminus[1];
+	  out[2] = Eminus[2];
+  }
+
   // note that this doesn't wrap properly for i,j < 0, but its
   // not really meant for that being just a way to get the raw data out
   // to save in some image format.

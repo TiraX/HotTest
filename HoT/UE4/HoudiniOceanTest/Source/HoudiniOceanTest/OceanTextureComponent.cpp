@@ -23,6 +23,7 @@ UOceanTextureComponent::UOceanTextureComponent(const FObjectInitializer& ObjectI
 	, OceanNormalTexture(nullptr)
 	, HeightFieldPixels(nullptr)
 	, NormalPixels(nullptr)
+	, JacobPixels(nullptr)
 	, _Ocean(nullptr)
 	, _OceanContext(nullptr)
 	, bChop(true)
@@ -59,20 +60,24 @@ UOceanTextureComponent::~UOceanTextureComponent()
 		delete[] HeightFieldPixels;
 	if (NormalPixels)
 		delete[] NormalPixels;
+	if (JacobPixels)
+		delete[] JacobPixels;
 }
 
-void UOceanTextureComponent::SetTexture(UTexture2D* HeightTexture, UTexture2D* NormalTexture)
+void UOceanTextureComponent::SetTexture(UTexture2D* HeightTexture, UTexture2D* NormalTexture, UTexture2D* JacobTexture)
 {
-	if (HeightTexture == nullptr || NormalTexture == nullptr)
+	if (HeightTexture == nullptr || NormalTexture == nullptr || JacobTexture == nullptr)
 		return;
-	if (HeightTexture->GetSizeX() != NormalTexture->GetSizeX())
+	if (HeightTexture->GetSizeX() != NormalTexture->GetSizeX() || HeightTexture->GetSizeX() != JacobTexture->GetSizeX())
 		return;
 
 	check(HeightTexture->GetSizeX() == HeightTexture->GetSizeY());
 	check(NormalTexture->GetSizeX() == NormalTexture->GetSizeY());
+	check(JacobTexture->GetSizeX() == JacobTexture->GetSizeY());
 
 	OceanHeightTexture = HeightTexture;
 	OceanNormalTexture = NormalTexture;
+	OceanJacTexture = JacobTexture;
 	SetupOcean();
 }
 
@@ -89,6 +94,8 @@ void UOceanTextureComponent::SetupOcean()
 		delete[] HeightFieldPixels;
 	if (NormalPixels)
 		delete[] NormalPixels;
+	if (JacobPixels)
+		delete[] JacobPixels;
 
 	// create things
 	int gridres = OceanHeightTexture->GetSizeX();
@@ -150,6 +157,8 @@ void UOceanTextureComponent::SetupOcean()
 	memset(HeightFieldPixels, 0, gridres * gridres * 4);
 	NormalPixels = new uint8[gridres * gridres * 4];
 	memset(NormalPixels, 0, gridres * gridres * 4);
+	JacobPixels = new uint8[gridres * gridres * 4];
+	memset(JacobPixels, 0, gridres * gridres * 4);
 
 	_Time = 0.f;
 }
@@ -275,7 +284,7 @@ FVector  DoNormal(drw::OceanContext* oc, int x, int y, int size, float strength)
 
 void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 {
-	if (!OceanHeightTexture || !OceanNormalTexture)
+	if (!OceanHeightTexture || !OceanNormalTexture || !OceanJacTexture)
 		return;
 
 	_Time += DeltaTime * SpeedScale;
@@ -312,16 +321,28 @@ void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 			lc.A = 1.f;
 			FColor c = lc.ToFColor(false);
 
-			if (lc.R > hmax)
-				hmax = lc.R;
-			if (lc.R < hmin)
-				hmin = lc.R;
-
 			ColorToSave[y * size + x] = c;
 			HeightFieldPixels[(y * size + x) * 4 + 0] = c.B;
 			HeightFieldPixels[(y * size + x) * 4 + 1] = c.G;
 			HeightFieldPixels[(y * size + x) * 4 + 2] = c.R;
 			HeightFieldPixels[(y * size + x) * 4 + 3] = c.A;
+
+
+			FLinearColor jac;
+			_OceanContext->getJacob(x, y, (float*)(&jac));
+
+			jac.B = jac.B * 0.5f + 0.5f;
+			c = jac.ToFColor(false);
+
+			if (jac.B > hmax)
+				hmax = jac.B;
+			if (jac.B < hmin)
+				hmin = jac.B;
+
+			JacobPixels[(y * size + x) * 4 + 0] = c.B;
+			JacobPixels[(y * size + x) * 4 + 1] = c.G;
+			JacobPixels[(y * size + x) * 4 + 2] = c.R;
+			JacobPixels[(y * size + x) * 4 + 3] = c.A;
 
 			// normals
 			//FVector vec = DoNormal(_OceanContext, x, y, size, NormalStrength);
@@ -348,8 +369,8 @@ void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 		}
 	}
 	t_end = timeGetTime();
-	//UE_LOG(LogOceanTextureComponent, Log, TEXT("hmax: %f; hmin: %f."), hmax, hmin);
-	UE_LOG(LogOceanTextureComponent, Log, TEXT("construct pixel time: %d."), int(t_end - t_start));
+	UE_LOG(LogOceanTextureComponent, Log, TEXT("hmax: %f; hmin: %f."), hmax, hmin);
+	//UE_LOG(LogOceanTextureComponent, Log, TEXT("construct pixel time: %d."), int(t_end - t_start));
 
 
 	static bool tryToSaveTexture = false;
@@ -395,4 +416,5 @@ void UOceanTextureComponent::UpdateFFTTexture(float DeltaTime)
 
 	UpdateTextureRegions(OceanHeightTexture, 0, size * 4, 4, HeightFieldPixels, true);
 	UpdateTextureRegions(OceanNormalTexture, 0, size * 4, 4, NormalPixels, true);
+	UpdateTextureRegions(OceanJacTexture, 0, size * 4, 4, JacobPixels, true);
 }
